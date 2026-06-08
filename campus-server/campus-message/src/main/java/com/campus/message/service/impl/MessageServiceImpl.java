@@ -13,6 +13,8 @@ import com.campus.message.entity.Message;
 import com.campus.message.mapper.ImConversationMapper;
 import com.campus.message.mapper.ImMessageMapper;
 import com.campus.message.service.MessageService;
+import com.campus.message.websocket.ChatWebSocketServer;
+import com.campus.message.websocket.MessagePushVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -102,6 +104,12 @@ public class MessageServiceImpl extends ServiceImpl<ImConversationMapper, Conver
         conv.setLastMessage(content.length() > 50 ? content.substring(0, 50) : content);
         conv.setLastMessageAt(message.getCreatedAt());
         this.updateById(conv);
+
+        // WebSocket 实时推送
+        if (ChatWebSocketServer.isOnline(toUserId)) {
+            ChatWebSocketServer.sendToUser(toUserId, new MessagePushVO(
+                    "NEW_MESSAGE", conv.getId(), senderId, content, type, null, message.getCreatedAt()));
+        }
 
         return message;
     }

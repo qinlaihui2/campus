@@ -95,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   getConversations, getMessages, sendMessage, deleteConversation,
@@ -116,7 +116,29 @@ const chatContainer = ref<HTMLElement>()
 const previewVisible = ref(false)
 const previewUrl = ref('')
 
-let pollTimer: number | null = null
+let ws: WebSocket | null = null
+
+function connectWebSocket(uid: number) {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${location.host}/ws/message/${uid}`
+  ws = new WebSocket(wsUrl)
+  ws.onmessage = (event) => {
+    try {
+      const push = JSON.parse(event.data)
+      if (push.type === 'NEW_MESSAGE') {
+        // 有新消息 → 刷新会话列表（若正在看该会话则刷新消息）
+        loadConversations()
+        if (currentConv.value && push.conversationId === currentConv.value.id) {
+          loadMessages(currentConv.value.id)
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  ws.onclose = () => {
+    // 3 秒后重连
+    setTimeout(() => { if (userId.value) connectWebSocket(userId.value) }, 3000)
+  }
+}
 
 onMounted(() => {
   const token = localStorage.getItem('accessToken')
@@ -124,10 +146,14 @@ onMounted(() => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]))
       userId.value = payload.userId
+      connectWebSocket(payload.userId)
     } catch { }
   }
   loadConversations()
-  pollTimer = window.setInterval(loadConversations, 10000)
+})
+
+onUnmounted(() => {
+  if (ws) { ws.close(); ws = null }
 })
 
 watch(() => messages.value.length, () => {

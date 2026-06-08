@@ -8,12 +8,15 @@ import com.campus.course.dto.CourseDetailVO;
 import com.campus.course.dto.CourseVO;
 import com.campus.course.dto.CommentVO;
 import com.campus.course.service.CourseService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "课程学习", description = "课程浏览、点赞、收藏、评论")
 @RestController
 @RequestMapping("/api/courses")
 @RequiredArgsConstructor

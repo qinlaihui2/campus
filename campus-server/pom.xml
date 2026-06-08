@@ -115,6 +115,12 @@
                 <version>8.5.14</version>
             </dependency>
             <!-- RabbitMQ managed by spring-boot-starter-parent -->
+            <!-- Swagger -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>2.2.22</version>
+            </dependency>
             <!-- JWT -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
