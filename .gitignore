@@ -1,0 +1,35 @@
+# Maven
+target/
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Node
+node_modules/
+dist/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Env
+.env
+.env.local
+*.log
+
+# Claude
+.claude/
+
+# Temporary
+*.tmp
+*.swp
+*.bak
