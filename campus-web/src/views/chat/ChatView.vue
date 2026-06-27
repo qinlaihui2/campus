@@ -333,7 +333,8 @@ async function sendMessage(presetQuestion?: string) {
       }
     }
   } catch (err: any) {
-    if (err.name !== 'AbortError') {
+    // 如果已经有 AI 回复内容，只是连接关闭，不弹错误
+    if (err.name !== 'AbortError' && !streamingText.value) {
       ElMessage.error('对话失败: ' + err.message)
     }
   } finally {

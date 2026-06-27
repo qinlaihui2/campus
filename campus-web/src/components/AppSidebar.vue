@@ -88,6 +88,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import { assetUrl } from '@/utils/assetUrl'
 
 const props = defineProps<{
@@ -100,32 +101,16 @@ defineEmits<{
 }>()
 
 const router = useRouter()
+const userStore = useUserStore()
 
-const isAdmin = computed(() => {
-  try {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return false
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.role === 'ADMIN'
-  } catch { return false }
-})
+const isAdmin = computed(() => userStore.userInfo?.role === 'ADMIN')
 
-const nickname = computed(() => {
-  try {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return '未登录'
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.nickname || payload.username || '用户'
-  } catch { return '用户' }
-})
+const nickname = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || '用户')
 
 const avatarUrl = computed(() => {
-  try {
-    const token = localStorage.getItem('accessToken')
-    if (!token) return ''
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return assetUrl(`/api/files/${payload.avatar}`)
-  } catch { return '' }
+  const avatar = userStore.userInfo?.avatar
+  if (!avatar) return ''
+  return assetUrl(`/api/files/${avatar}`)
 })
 
 function handleCommand(cmd: string) {
