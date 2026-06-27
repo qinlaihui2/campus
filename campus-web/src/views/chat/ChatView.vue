@@ -297,9 +297,12 @@ async function sendMessage(presetQuestion?: string) {
   try {
     const base = apiBaseUrl()
     const url = `${base}/api/chat/send?${params.toString()}`
+    const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
+    if (base) headers['ngrok-skip-browser-warning'] = 'true'
+
     const response = await fetch(url, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers,
       signal: abortController.signal,
     })
 
