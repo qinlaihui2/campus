@@ -24,6 +24,7 @@ public class AdminAnnouncementController {
     public R<?> list(@RequestParam(defaultValue = "1") int page,
                      @RequestParam(defaultValue = "10") int size) {
         var result = announcementService.lambdaQuery()
+                .ne(Announcement::getStatus, "ARCHIVED")
                 .orderByDesc(Announcement::getPublishedAt)
                 .page(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size));
         return R.ok(com.campus.common.result.PageResult.of(
