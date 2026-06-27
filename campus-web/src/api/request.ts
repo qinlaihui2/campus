@@ -13,6 +13,10 @@ const request = axios.create({
 const AUTH_WHITELIST = ['/auth/login', '/auth/register', '/auth/verify-code']
 
 request.interceptors.request.use((config) => {
+  // 跳过 ngrok 免费版浏览器警告页
+  if (API_BASE.includes('ngrok')) {
+    config.headers['ngrok-skip-browser-warning'] = 'true'
+  }
   const isWhitelist = AUTH_WHITELIST.some(path => config.url?.includes(path))
   if (!isWhitelist) {
     const token = localStorage.getItem('accessToken')
