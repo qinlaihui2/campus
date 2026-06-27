@@ -31,6 +31,7 @@ public class MarketServiceImpl extends ServiceImpl<MarketItemMapper, MarketItem>
         implements MarketService {
 
     private final MarketLikeMapper marketLikeMapper;
+    private final MarketCommentLikeMapper marketCommentLikeMapper;
     private final MarketCommentMapper marketCommentMapper;
     private final MarketOfferMapper marketOfferMapper;
     private final UserMapper userMapper;
@@ -220,6 +221,38 @@ public class MarketServiceImpl extends ServiceImpl<MarketItemMapper, MarketItem>
                         .build());
             }
 
+            return true;
+        }
+    }
+
+    // ==================== 评论点赞 ====================
+
+    @Override
+    @Transactional
+    public boolean toggleCommentLike(Long commentId, Long userId) {
+        MarketComment comment = marketCommentMapper.selectById(commentId);
+        if (comment == null || comment.getDeleted() == 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND);
+        }
+
+        LambdaQueryWrapper<MarketCommentLike> wrapper = new LambdaQueryWrapper<MarketCommentLike>()
+                .eq(MarketCommentLike::getCommentId, commentId)
+                .eq(MarketCommentLike::getUserId, userId);
+        MarketCommentLike existing = marketCommentLikeMapper.selectOne(wrapper);
+
+        if (existing != null) {
+            marketCommentLikeMapper.deleteById(existing.getId());
+            comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+            marketCommentMapper.updateById(comment);
+            return false;
+        } else {
+            MarketCommentLike like = new MarketCommentLike();
+            like.setCommentId(commentId);
+            like.setUserId(userId);
+            like.setCreatedAt(LocalDateTime.now());
+            marketCommentLikeMapper.insert(like);
+            comment.setLikeCount(comment.getLikeCount() + 1);
+            marketCommentMapper.updateById(comment);
             return true;
         }
     }
@@ -551,6 +584,14 @@ public class MarketServiceImpl extends ServiceImpl<MarketItemMapper, MarketItem>
             if (replyTo != null) {
                 vo.setReplyToUserNickname(replyTo.getNickname() != null ? replyTo.getNickname() : "同学");
             }
+        }
+
+        // 当前用户是否已点赞该评论
+        if (currentUserId != null) {
+            vo.setLiked(marketCommentLikeMapper.selectCount(
+                    new LambdaQueryWrapper<MarketCommentLike>()
+                            .eq(MarketCommentLike::getCommentId, comment.getId())
+                            .eq(MarketCommentLike::getUserId, currentUserId)) > 0);
         }
 
         return vo;

@@ -87,6 +87,7 @@
               :depth="0"
               :my-user-id="myUserId"
               @reply="onReply"
+              @like="onLikeComment"
               @delete="onDeleteComment"
             />
           </div>
@@ -128,7 +129,7 @@ import { Star } from '@element-plus/icons-vue'
 import CommentItem from '@/components/CommentItem.vue'
 import type { MarketItemVO, MarketCommentVO, OfferVO } from '@/api/market'
 import {
-  getMarketItemDetail, likeMarketItem, getMarketComments, addMarketComment,
+  getMarketItemDetail, likeMarketItem, likeMarketComment, getMarketComments, addMarketComment,
   deleteMarketComment, makeOffer, getReceivedOffers, getSentOffers,
   acceptOffer, rejectOffer, markItemSold,
 } from '@/api/market'
@@ -243,6 +244,14 @@ async function handleAddComment() {
     replyTo.value = null
     fetchComments()
   } catch { /* handled */ }
+}
+
+async function onLikeComment(comment: { id: number; liked: boolean; likeCount: number }) {
+  try {
+    const res = await likeMarketComment(comment.id)
+    comment.liked = res.data.liked
+    comment.likeCount += res.data.liked ? 1 : -1
+  } catch { /* ignore */ }
 }
 
 async function onDeleteComment(comment: { id: number }) {

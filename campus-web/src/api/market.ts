@@ -115,6 +115,10 @@ export function addMarketComment(itemId: number, content: string, parentId?: num
   )
 }
 
+export function likeMarketComment(commentId: number) {
+  return request.post<any, { code: number; data: { liked: boolean } }>(`/market/comments/${commentId}/like`)
+}
+
 export function deleteMarketComment(commentId: number) {
   return request.delete(`/market/comments/${commentId}`)
 }

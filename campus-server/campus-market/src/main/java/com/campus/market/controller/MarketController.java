@@ -115,6 +115,13 @@ public class MarketController {
         return R.ok(Map.of("success", true, "comment", comment));
     }
 
+    @PostMapping("/comments/{commentId}/like")
+    public R<Map<String, Object>> likeComment(@PathVariable Long commentId) {
+        Long userId = UserContext.getUserId();
+        boolean liked = marketService.toggleCommentLike(commentId, userId);
+        return R.ok(Map.of("liked", liked));
+    }
+
     @DeleteMapping("/comments/{commentId}")
     public R<String> deleteComment(@PathVariable Long commentId) {
         Long userId = UserContext.getUserId();

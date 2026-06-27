@@ -28,6 +28,9 @@ public interface MarketService {
     // 点赞
     boolean toggleLike(Long itemId, Long userId);
 
+    // 评论点赞
+    boolean toggleCommentLike(Long commentId, Long userId);
+
     // 评论
     List<MarketCommentVO> getComments(Long itemId, Long currentUserId);
 
