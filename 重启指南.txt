@@ -1,0 +1,71 @@
+============================================
+ 校圈 CampusHub - 重启上线指南
+============================================
+
+每次电脑关机后再开机，按照下面步骤操作：
+
+
+第 1 步：启动中间件（打开终端1）
+----------------------------------------------
+cd E:\java\claude-myblog\docker
+docker-compose up -d mysql postgres redis rabbitmq minio
+
+⏳ 等 15 秒让 MySQL 就绪
+
+
+第 2 步：启动后端（终端1 继续）
+----------------------------------------------
+cd E:\java\claude-myblog\campus-server\campus-app
+set DEEPSEEK_API_KEY=sk-你的DeepSeek密钥
+mvn spring-boot:run
+
+⏳ 看到 "Started CampusApplication" 就是好了
+
+
+第 3 步：启动 ngrok（新开终端2）
+----------------------------------------------
+ngrok http 8080
+
+⏳ 会显示一个 URL，类似：
+   https://xxx-xxx.ngrok-free.dev
+
+📋 把这个 URL 复制下来！
+
+
+第 4 步：更新前端 API 地址
+----------------------------------------------
+1. 用记事本打开 E:\java\claude-myblog\campus-web\.env.production
+2. 把 URL 改成第 3 步复制的 ngrok 地址
+3. 保存
+
+4. 打开终端（哪里都行），执行：
+cd E:\java\claude-myblog
+git add campus-web/.env.production
+git commit -m "update ngrok url"
+git push origin master
+
+⏳ 等 1 分钟 GitHub Actions 自动部署
+
+
+第 5 步：访问网站
+----------------------------------------------
+http://campus.qinlaihuie2.xyz
+
+
+============================================
+常见问题
+============================================
+
+Q: Docker Desktop 没有自动启动？
+   → 手动打开 Docker Desktop，等它变绿再执行第 1 步
+
+Q: 端口 8080 被占用？
+   → 执行：netstat -ano | findstr :8080
+   → 找到 PID 后执行：taskkill /PID 对应的PID /F
+
+Q: ngrok 命令找不到？
+   → 去官网重新下载安装：https://ngrok.com/download
+
+Q: GitHub push 失败？
+   → 先执行：git pull origin master
+   → 再执行：git push origin master
