@@ -1,0 +1,35 @@
+# ============================================
+# 阿里云服务器专用配置 (120.55.76.100)
+# 启动方式: mvn spring-boot:run -Dspring-boot.run.profiles=server
+# ============================================
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:13306/campus_assistant?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: root
+
+  datasource-pg:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/campus_vector
+    username: postgres
+    password: "200566"
+
+  data:
+    redis:
+      host: localhost
+      port: 6739
+      password: "200566"
+      database: 0
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: rabbitmq
+    password: "200566"
+
+minio:
+  endpoint: http://localhost:9000
+  access-key: minio
+  secret-key: minioadmin
