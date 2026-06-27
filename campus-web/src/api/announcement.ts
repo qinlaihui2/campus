@@ -25,9 +25,11 @@ export interface AnnouncementAttachment {
 }
 
 export function getAnnouncements(category?: string, page = 1, size = 10) {
+  const params: any = { page, size }
+  if (category) params.category = category
   return request.get<any, { data: { records: Announcement[]; total: number; page: number; size: number } }>(
     '/announcements',
-    { params: { category, page, size } }
+    { params }
   )
 }
 
