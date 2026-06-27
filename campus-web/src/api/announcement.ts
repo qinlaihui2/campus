@@ -45,6 +45,13 @@ export function getAttachments(id: number) {
   return request.get<any, { data: AnnouncementAttachment[] }>(`/announcements/${id}/attachments`)
 }
 
+export function getAdminAnnouncements(page = 1, size = 10) {
+  return request.get<any, { data: { records: Announcement[]; total: number; page: number; size: number } }>(
+    '/admin/announcements',
+    { params: { page, size } }
+  )
+}
+
 export function createAnnouncement(data: Partial<Announcement>) {
   return request.post('/admin/announcements', data)
 }

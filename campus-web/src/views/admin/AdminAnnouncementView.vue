@@ -143,7 +143,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { assetUrl } from '@/utils/assetUrl'
 import {
-  getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement,
+  getAdminAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   toggleCarousel, uploadAttachment, deleteAttachment, uploadImage, getAttachments,
   type Announcement,
 } from '@/api/announcement'
@@ -174,8 +174,7 @@ onMounted(() => fetchList())
 async function fetchList() {
   loading.value = true
   try {
-    // fetch all categories for admin
-    const res = await getAnnouncements(undefined, currentPage.value, pageSize)
+    const res = await getAdminAnnouncements(currentPage.value, pageSize)
     tableData.value = res.data.records
     total.value = res.data.total
   } finally { loading.value = false }

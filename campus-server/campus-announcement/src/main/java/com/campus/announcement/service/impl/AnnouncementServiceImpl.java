@@ -1,6 +1,5 @@
 package com.campus.announcement.service.impl;
 
-import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -14,7 +13,6 @@ import com.campus.common.result.ResultCode;
 import com.campus.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +27,8 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
 
     private final AnnouncementAttachmentMapper attachmentMapper;
     private final FileService fileService;
+
+    // ==================== 公开接口 ====================
 
     @Override
     public Page<Announcement> listByCategory(String category, int page, int size) {
@@ -57,11 +57,42 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     @Override
     public Announcement getDetail(Long id) {
         Announcement announcement = this.getById(id);
-        if (announcement == null || announcement.getDeleted() == 1) {
+        if (announcement == null || !"PUBLISHED".equals(announcement.getStatus())) {
             throw new BusinessException(ResultCode.NOT_FOUND);
         }
         return announcement;
     }
+
+    // ==================== Admin 接口 ====================
+
+    @Override
+    @Transactional
+    public void createAnnouncement(Announcement announcement, Long publisherId) {
+        announcement.setPublisherId(publisherId);
+        announcement.setPublishedAt(LocalDateTime.now());
+        announcement.setStatus("PUBLISHED");
+        announcement.setIsCarousel(announcement.getIsCarousel() != null ? announcement.getIsCarousel() : 0);
+        announcement.setCarouselSort(announcement.getCarouselSort() != null ? announcement.getCarouselSort() : 0);
+        announcement.setPriority(announcement.getPriority() != null ? announcement.getPriority() : 0);
+        this.save(announcement);
+    }
+
+    @Override
+    public void updateAnnouncement(Long id, Announcement announcement) {
+        announcement.setId(id);
+        this.updateById(announcement);
+    }
+
+    @Override
+    public void deleteAnnouncement(Long id) {
+        Announcement announcement = this.getById(id);
+        if (announcement != null) {
+            announcement.setStatus("ARCHIVED");
+            this.updateById(announcement);
+        }
+    }
+
+    // ==================== 附件 ====================
 
     @Override
     @Transactional

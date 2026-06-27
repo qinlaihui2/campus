@@ -10,7 +10,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -21,30 +20,37 @@ public class AdminAnnouncementController {
 
     private final AnnouncementService announcementService;
 
+    @GetMapping
+    public R<?> list(@RequestParam(defaultValue = "1") int page,
+                     @RequestParam(defaultValue = "10") int size) {
+        var result = announcementService.lambdaQuery()
+                .orderByDesc(Announcement::getPublishedAt)
+                .page(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size));
+        return R.ok(com.campus.common.result.PageResult.of(
+                result.getTotal(), result.getCurrent(), result.getSize(), result.getRecords()));
+    }
+
     @PostMapping
-    public R<Announcement> create(@RequestBody Announcement announcement) {
-        announcement.setPublisherId(UserContext.getUserId());
-        announcement.setPublishedAt(LocalDateTime.now());
-        announcement.setStatus("PUBLISHED");
-        announcementService.save(announcement);
-        return R.ok(announcement);
+    public R<String> create(@RequestBody Announcement announcement) {
+        announcementService.createAnnouncement(announcement, UserContext.getUserId());
+        return R.ok("创建成功");
     }
 
     @PutMapping("/{id}")
     public R<String> update(@PathVariable Long id, @RequestBody Announcement announcement) {
-        announcement.setId(id);
-        announcementService.updateById(announcement);
+        announcementService.updateAnnouncement(id, announcement);
         return R.ok("更新成功");
     }
 
     @DeleteMapping("/{id}")
     public R<String> delete(@PathVariable Long id) {
-        announcementService.removeById(id);
+        announcementService.deleteAnnouncement(id);
         return R.ok("删除成功");
     }
 
     @PostMapping("/{id}/carousel")
-    public R<String> toggleCarousel(@PathVariable Long id, @RequestParam int isCarousel, @RequestParam(defaultValue = "0") int sort) {
+    public R<String> toggleCarousel(@PathVariable Long id, @RequestParam int isCarousel,
+                                     @RequestParam(defaultValue = "0") int sort) {
         Announcement announcement = announcementService.getById(id);
         if (announcement == null) {
             return R.fail("公告不存在");
