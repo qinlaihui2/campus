@@ -119,6 +119,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { assetUrl } from '@/utils/assetUrl'
 import { useRoute } from 'vue-router'
 import {
   getCourseDetail, likeCourse, favoriteCourse,
@@ -180,8 +181,7 @@ function toggleChapter(ci: number) {
 }
 
 function getVideoUrl(url: string) {
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 function formatNum(n: number) {
   if (n >= 10000) return (n / 10000).toFixed(1) + 'w'

@@ -170,6 +170,7 @@ import { uploadImage } from '@/api/announcement'
 import { publishToSquare } from '@/api/square'
 import EmojiPicker from '@/components/EmojiPicker.vue'
 import type { Emoji } from '@/api/emoji'
+import { assetUrl, apiBaseUrl } from '@/utils/assetUrl'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -294,7 +295,9 @@ async function sendMessage(presetQuestion?: string) {
   abortController = new AbortController()
 
   try {
-    const response = await fetch(`/api/chat/send?${params.toString()}`, {
+    const base = apiBaseUrl()
+    const url = `${base}/api/chat/send?${params.toString()}`
+    const response = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       signal: abortController.signal,
@@ -439,8 +442,7 @@ async function handleAvatarUpload(file: File) {
 
 function getAvatarUrl(avatar: string | undefined | null) {
   if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 async function saveProfile() {
@@ -496,7 +498,7 @@ function insertEmoji(emoji: Emoji) {
   if (emoji.emojiChar) {
     inputText.value += emoji.emojiChar
   } else if (emoji.imageUrl) {
-    const url = emoji.imageUrl.startsWith('http') ? emoji.imageUrl : `/api/files/${emoji.imageUrl}`
+    const url = assetUrl(`/api/files/${emoji.imageUrl}`)
     inputText.value += `![${emoji.name}](${url})`
   }
   emojiPickerVisible.value = false

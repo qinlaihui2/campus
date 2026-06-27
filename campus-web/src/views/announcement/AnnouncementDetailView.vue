@@ -45,6 +45,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAnnouncementDetail, getAttachments, type Announcement, type AnnouncementAttachment } from '@/api/announcement'
+import { assetUrl } from '@/utils/assetUrl'
 
 const route = useRoute()
 const detail = ref<Announcement>({} as Announcement)
@@ -64,8 +65,7 @@ onMounted(async () => {
 })
 
 function getImageUrl(coverImage: string) {
-  if (coverImage.startsWith('http')) return coverImage
-  return `/api/files/${coverImage}`
+  return assetUrl(`/api/files/${coverImage}`)
 }
 function formatDate(dateStr: string) {
   if (!dateStr) return ''

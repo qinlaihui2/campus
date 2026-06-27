@@ -69,10 +69,11 @@ defineEmits<{
   delete: [comment: GenericComment]
 }>()
 
+import { assetUrl } from '@/utils/assetUrl'
+
 function getAvatarUrl(avatar: string) {
   if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 function timeAgo(dateStr: string) {

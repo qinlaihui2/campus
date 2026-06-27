@@ -54,6 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAnnouncements, getCarousel, type Announcement } from '@/api/announcement'
+import { assetUrl } from '@/utils/assetUrl'
 import AnnouncementCarousel from '@/components/AnnouncementCarousel.vue'
 
 const router = useRouter()
@@ -108,8 +109,7 @@ function goDetail(id: number) {
 }
 
 function getImageUrl(coverImage: string) {
-  if (coverImage.startsWith('http')) return coverImage
-  return `/api/files/${coverImage}`
+  return assetUrl(`/api/files/${coverImage}`)
 }
 
 function formatDate(dateStr: string) {

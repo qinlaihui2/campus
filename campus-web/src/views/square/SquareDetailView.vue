@@ -143,6 +143,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { assetUrl } from '@/utils/assetUrl'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSquarePostDetail, likeSquarePost, favoriteSquarePost, getComments, addComment, likeComment, deleteComment, type SquarePost, type CommentVO } from '@/api/square'
@@ -285,8 +286,7 @@ async function handleFavorite() {
 
 function getAvatarUrl(avatar: string) {
   if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 function formatTime(dateStr: string) {

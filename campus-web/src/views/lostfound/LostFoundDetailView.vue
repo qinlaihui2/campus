@@ -54,6 +54,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { assetUrl } from '@/utils/assetUrl'
 import { getPostDetail, resolvePost, type LostFoundPost } from '@/api/lostfound'
 import { sendMessage } from '@/api/message'
 
@@ -105,8 +106,7 @@ async function handleResolve() {
 
 function getImageUrl(url: string) {
   if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 
 function formatDate(d: string) {

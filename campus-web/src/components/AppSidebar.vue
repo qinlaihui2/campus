@@ -88,6 +88,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { assetUrl } from '@/utils/assetUrl'
 
 const props = defineProps<{
   showNewChat?: boolean
@@ -123,8 +124,7 @@ const avatarUrl = computed(() => {
     const token = localStorage.getItem('accessToken')
     if (!token) return ''
     const payload = JSON.parse(atob(token.split('.')[1]))
-    const avatar = payload.avatar || ''
-    return avatar.startsWith('http') ? avatar : `/api/files/${avatar}`
+    return assetUrl(`/api/files/${payload.avatar}`)
   } catch { return '' }
 })
 

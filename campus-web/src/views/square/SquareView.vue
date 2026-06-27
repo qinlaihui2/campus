@@ -86,6 +86,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { assetUrl } from '@/utils/assetUrl'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSquarePosts, getHotPosts, likeSquarePost, type SquarePost } from '@/api/square'
@@ -161,8 +162,7 @@ async function handleLike(post: SquarePost) {
 
 function getAvatarUrl(avatar: string) {
   if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 function renderPreview(markdown: string) {

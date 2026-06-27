@@ -132,6 +132,7 @@ import {
   deleteMarketComment, makeOffer, getReceivedOffers, getSentOffers,
   acceptOffer, rejectOffer, markItemSold,
 } from '@/api/market'
+import { assetUrl } from '@/utils/assetUrl'
 
 const route = useRoute()
 const router = useRouter()
@@ -165,13 +166,13 @@ const isOwner = computed(() => myUserId.value > 0 && item.value?.userId === myUs
 
 const allImages = computed(() => {
   if (!item.value) return []
-  return (item.value.imageUrls || []).map(u => u.startsWith('http') ? u : `/api/files/${u}`)
+  return (item.value.imageUrls || []).map(u => assetUrl(`/api/files/${u}`))
 })
 const mainImage = computed(() => allImages.value[selectedImage.value] || allImages.value[0])
 
 function getAvatarUrl(avatar?: string | null) {
   if (!avatar) return ''
-  return avatar.startsWith('http') ? avatar : `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 async function fetchDetail() {

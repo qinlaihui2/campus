@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getEmojis, searchEmojis as searchApi, getFavoriteEmojis, type Emoji } from '@/api/emoji'
+import { assetUrl } from '@/utils/assetUrl'
 
 defineEmits<{ select: [emoji: Emoji] }>()
 
@@ -121,8 +122,7 @@ function handleSearch() {
 
 function getImageUrl(url: string) {
   if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 </script>
 

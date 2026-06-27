@@ -104,6 +104,7 @@ import {
 import { uploadImage } from '@/api/announcement'
 import EmojiPicker from '@/components/EmojiPicker.vue'
 import type { Emoji } from '@/api/emoji'
+import { assetUrl } from '@/utils/assetUrl'
 
 const userId = ref<number>(0)
 const conversations = ref<Conversation[]>([])
@@ -248,8 +249,7 @@ async function handleDelete() {
 
 function getAvatarUrl(avatar: string | null | undefined) {
   if (!avatar) return ''
-  if (avatar.startsWith('http')) return avatar
-  return `/api/files/${avatar}`
+  return assetUrl(`/api/files/${avatar}`)
 }
 
 function getPeerName(conv: Conversation) {
@@ -272,8 +272,7 @@ function formatTime(t: string) {
 }
 
 function getImageUrl(url: string) {
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 
 function previewImage(url: string) {
@@ -287,7 +286,7 @@ function insertEmoji(emoji: Emoji) {
   if (emoji.emojiChar) {
     inputText.value += emoji.emojiChar
   } else if (emoji.imageUrl) {
-    const url = emoji.imageUrl.startsWith('http') ? emoji.imageUrl : `/api/files/${emoji.imageUrl}`
+    const url = assetUrl(`/api/files/${emoji.imageUrl}`)
     inputText.value += `[${emoji.name}](${url})`
   }
   emojiPickerVisible.value = false

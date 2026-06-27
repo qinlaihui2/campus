@@ -106,6 +106,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getPosts, publishPost, type LostFoundPost } from '@/api/lostfound'
 import { uploadImage } from '@/api/announcement'
+import { assetUrl } from '@/utils/assetUrl'
 
 const router = useRouter()
 const list = ref<LostFoundPost[]>([])
@@ -174,13 +175,11 @@ function goDetail(id: number) { router.push(`/lost-found/${id}`) }
 function getFirstImage(urls: string) {
   if (!urls) return ''
   const first = urls.split(',')[0]
-  if (first.startsWith('http')) return first
-  return `/api/files/${first}`
+  return assetUrl(`/api/files/${first}`)
 }
 
 function getImageUrl(url: string) {
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 
 function formatDate(d: string) {

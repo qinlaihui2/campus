@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import type { Announcement } from '@/api/announcement'
+import { assetUrl } from '@/utils/assetUrl'
 
 defineProps<{ slides: Announcement[] }>()
 
@@ -30,9 +31,7 @@ function goDetail(id: number) {
 }
 
 function getImageUrl(coverImage: string) {
-  // If it's already a full URL, return as-is; otherwise prepend API proxy path
-  if (coverImage.startsWith('http')) return coverImage
-  return `/api/files/${coverImage}`
+  return assetUrl(`/api/files/${coverImage}`)
 }
 
 function categoryLabel(category: string) {

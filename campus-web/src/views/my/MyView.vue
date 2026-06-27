@@ -64,6 +64,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getMyLikes, getMyFavorites, type MyItemVO } from '@/api/my'
+import { assetUrl } from '@/utils/assetUrl'
 
 const router = useRouter()
 const activeTab = ref<'likes' | 'favorites'>('likes')
@@ -134,8 +135,7 @@ function textCardBg(id: number) {
 }
 
 function getImageUrl(url: string) {
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 
 function formatNum(n: number) {

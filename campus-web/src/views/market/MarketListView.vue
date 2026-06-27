@@ -119,6 +119,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getMarketItems, publishMarketItem, type MarketItemVO } from '@/api/market'
 import request from '@/api/request'
+import { assetUrl } from '@/utils/assetUrl'
 
 const router = useRouter()
 const items = ref<MarketItemVO[]>([])
@@ -156,13 +157,13 @@ function goDetail(id: number) {
 function getFirstImage(item: MarketItemVO) {
   const urls = item.imageUrls || []
   if (urls.length > 0) {
-    return urls[0].startsWith('http') ? urls[0] : `/api/files/${urls[0]}`
+    return assetUrl(`/api/files/${urls[0]}`)
   }
   return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect fill="%23f0f0f0" width="200" height="200"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23c0c4cc" font-size="40">📦</text></svg>'
 }
 
 function getImageUrl(url: string) {
-  return url.startsWith('http') ? url : `/api/files/${url}`
+  return assetUrl(`/api/files/${url}`)
 }
 
 // --- 发布 ---

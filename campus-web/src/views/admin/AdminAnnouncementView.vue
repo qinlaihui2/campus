@@ -141,6 +141,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { assetUrl } from '@/utils/assetUrl'
 import {
   getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement,
   toggleCarousel, uploadAttachment, deleteAttachment, uploadImage, getAttachments,
@@ -238,7 +239,7 @@ async function handleCoverUpload(file: File) {
 
 async function handleContentImageUpload(file: File) {
   const res = await uploadImage(file)
-  const url = `/api/files/${res.data}`
+  const url = assetUrl(`/api/files/${res.data}`)
   form.value.content += `<img src="${url}" alt="" style="max-width:100%;" />`
   ElMessage.success('图片已插入')
   return false
@@ -265,8 +266,7 @@ async function removeAttachment(attId: number) {
 }
 
 function getImageUrl(coverImage: string) {
-  if (coverImage.startsWith('http')) return coverImage
-  return `/api/files/${coverImage}`
+  return assetUrl(`/api/files/${coverImage}`)
 }
 
 function categoryLabel(category: string) {
