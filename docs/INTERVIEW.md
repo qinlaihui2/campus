@@ -6,7 +6,7 @@
 
 ## 一、项目速览（1 分钟电梯演讲）
 
-**校圈 CampusHub** 是一个基于 RAG（检索增强生成）技术的 AI 校园综合平台。Spring Boot 3.4 多模块后端 + Vue 3 前端，集成 DeepSeek 大模型、pgvector 向量检索、SSE 流式输出。覆盖 AI 对话、课程学习、问答广场、知识库管理、私信 IM、失物招领等 14 个业务模块。32 个自动化测试（JUnit 5 + Mockito + MockMvc）。
+**校圈 CampusHub** 是一个基于 RAG（检索增强生成）技术的 AI 校园综合平台。Spring Boot 3.4 多模块后端 + Vue 3 前端，集成 DeepSeek 大模型、pgvector 向量检索、SSE 流式输出。覆盖 AI 对话、课程学习、问答广场、知识库管理、私信 IM、失物招领、二手交易市场等 16 个业务模块。32 个自动化测试（JUnit 5 + Mockito + MockMvc）。
 
 ```
 技术栈一句话：
@@ -14,12 +14,13 @@ Spring Boot 3.4 + Vue 3 + MyBatis Plus + LangChain4j + DeepSeek + pgvector + Red
 ```
 
 **关键数字**：
-- 14 个 Maven 模块
+- 16 个 Maven 模块
 - 32 个测试全部通过
-- 6 种中间件（MySQL / PG+pgvector / Redis / RabbitMQ / MinIO / Nginx）
+- 7 种中间件（MySQL / PG+pgvector / Redis / RabbitMQ / MinIO / Nginx / Docker）
 - SSE 流式 AI 对话，20 条上下文窗口
 - Redisson 分布式限流 + JWT 双 Token 认证
 - WebSocket 实时私信推送
+- 完整 CI/CD：Git push → 服务器 git pull → Maven 重编 → 前端 npm build → Nginx 热更
 
 ---
 
@@ -28,12 +29,12 @@ Spring Boot 3.4 + Vue 3 + MyBatis Plus + LangChain4j + DeepSeek + pgvector + Red
 > 主动提这些点，把面试官引向你准备过的方向：
 
 1. **"我们这个项目最核心的是 RAG pipeline，从文档上传到 AI 回答，中间经过了 5 个环节……"** → 引到 RAG 原理
-2. **"做点赞功能的时候遇到过并发竞态，后来用数据库原子操作解决的……"** → 引到并发处理
-3. **"14 个模块的依赖关系画过图，单向依赖，没有循环……"** → 引到架构设计
+2. **"做评论点赞功能时，从数据库表设计到前端 UI 完整链路都是自己开的……"** → 引到全栈能力
+3. **"踩过 Redis 缓存反模式的坑，知道了简单 CRUD 不该用缓存……"** → 引到工程经验
 
 ---
 
-## 三、面试 Q&A（12 题）
+## 三、面试 Q&A（14 题）
 
 ---
 
@@ -303,9 +304,87 @@ Consumer 异步消费 → 下载文件 → 解析文本 → Chunk 分割 →
 - 原因：Nginx 默认开启 proxy_buffering
 - 解决：Nginx location 加 `proxy_buffering off; proxy_cache off; X-Accel-Buffering: no`
 
-**选择 3：Service Impl 继承 MyBatis Plus ServiceImpl 导致 Mock 困难**
+**选择 3：axios 把 JavaScript undefined 当字符串发给后端**
+- 现象：公告管理"全部"标签页和后台列表查询为空，但按分类筛选却正常
+- 排查：抓包发现请求 URL 是 `/api/announcements?category=undefined&page=1`，`undefined` 被 axios 序列化成了字符串
+- 原因：`axios.get('/api', { params: { category: undefined } })` 中 `undefined` 没有被过滤，URLSearchParams 将其转为字符串 `"undefined"`
+- 解决：前端 API 层用 `if (category) params.category = category` 条件添加参数，而不是直接传 `undefined`
+- 教训：永远不要信任前端传参，后端也要防御空值（`listByCategory` 增加 `"undefined".equalsIgnoreCase(category)` 兜底）
+
+**选择 4：Redis 缓存用于简单 CRUD 的反模式**
+- 现象：公告管理页面删除后数据仍然显示，用户体验"删不掉"
+- 排查：后端 `removeById` 成功（deleted=1），但前端列表 API 返回的数据里被删记录仍然存在
+- 原因：`@Cacheable` 缓存了公告列表（TTL 5分钟），`@CacheEvict` 在 Controller 层未正确清 Redis 缓存，AOP 代理链顺序问题导致 `@CacheEvict` 不生效
+- 解决：彻底移除公告模块的 `@Cacheable`/`@CacheEvict`，公告列表直接查 MySQL——数据量小、查询简单，缓存弊大于利
+- 教训：不是所有场景都该用缓存。**简单 CRUD 用缓存 = 过度设计**，缓存适用于读多写少、查询昂贵的场景
+
+**选择 3（旧）：Service Impl 继承 MyBatis Plus ServiceImpl 导致 Mock 困难**
 - 现象：单元测试中 `@InjectMocks` 无法注入 `baseMapper`
 - 解决：`ReflectionTestUtils.setField(courseService, "baseMapper", courseMapper)` 手动注入
+
+---
+
+### Q13: 从零开发一个全栈功能（评论点赞）的全流程是什么？
+
+**面试官意图**：看你有没有独立负责一个完整功能的经验。
+
+**答（以二手市场评论点赞为例，6 层贯通）**：
+
+```
+数据库层: CREATE TABLE market_comment_like (id, comment_id, user_id, UNIQUE INDEX)
+     ↓
+实体层:   MarketCommentLike.java (@TableName("market_comment_like"))
+     ↓
+持久层:   MarketCommentLikeMapper.java (extends BaseMapper<MarketCommentLike>)
+     ↓
+服务层:   MarketService.toggleCommentLike() — toggle 模式：INSERT/DELETE + like_count 原子更新
+     ↓
+控制器层: MarketController.likeComment() — POST /api/market/comments/{commentId}/like
+     ↓
+前端 API: likeMarketComment(id) — POST /market/comments/{id}/like
+     ↓
+前端 UI: CommentItem.vue 点赞按钮 + onLikeComment() 响应式更新 liked + likeCount
+```
+
+核心设计：
+- **Toggle 模式**：同一用户再点 = 取消点赞（幂等）
+- **UNIQUE INDEX(comment_id, user_id)**：数据库层面保证不重复
+- **冗余 like_count**：避免每次查评论列表都要 COUNT 子查询
+- **前端即时响应**：`comment.liked = true; comment.likeCount += 1` 不刷新列表
+
+**关键文件**（6 个文件）：
+- DDL: `docs/schema.sql` → `market_comment_like`
+- Entity: `campus-market/.../entity/MarketCommentLike.java`
+- Mapper: `campus-market/.../mapper/MarketCommentLikeMapper.java`
+- Service: `campus-market/.../service/impl/MarketServiceImpl.java:228-260`
+- Controller: `campus-market/.../controller/MarketController.java:118-122`
+- Frontend: `campus-web/src/api/market.ts` + `src/views/market/MarketDetailView.vue`
+
+---
+
+### Q14: 多模块 Maven 项目怎么增量编译一个模块？
+
+**面试官意图**：考察 Maven 工程化和模块化理解。
+
+**答**：
+
+```bash
+# 只编译 campus-market 模块及它在当前 reactor 中的依赖
+mvn clean install -pl campus-market -am -DskipTests
+
+# 完整部署流程
+mvn clean install -pl campus-market,campus-app -am -DskipTests
+kill $(ps aux | grep CampusApplication | grep -v grep | awk '{print $2}')
+nohup mvn -pl campus-app spring-boot:run --profile=server > /tmp/campus.log 2>&1 &
+```
+
+关键点：
+- `-pl` 指定目标模块
+- `-am` (also-make) 自动编译依赖链
+- 改了一个模块的代码，只重编受影响的模块 + 启动模块
+- `spring-boot:run` 使用 `-pl campus-app` 需要先 `install` 目标模块到本地仓库，否则 running class 还是旧 JAR
+
+**常见坑**：改了子模块代码直接用 `-pl campus-app spring-boot:run` 启动，Maven 不会自动重编依赖模块——必须先用 `install` 把新 JAR 打到本地仓库。
 
 ---
 
