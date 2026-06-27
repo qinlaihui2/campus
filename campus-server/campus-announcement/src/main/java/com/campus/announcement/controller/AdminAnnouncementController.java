@@ -6,6 +6,7 @@ import com.campus.announcement.service.AnnouncementService;
 import com.campus.common.result.R;
 import com.campus.common.utils.UserContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ public class AdminAnnouncementController {
     private final AnnouncementService announcementService;
 
     @PostMapping
+    @CacheEvict(value = {"announcement:list", "announcement:carousel"}, allEntries = true)
     public R<Announcement> create(@RequestBody Announcement announcement) {
         announcement.setPublisherId(UserContext.getUserId());
         announcement.setPublishedAt(LocalDateTime.now());
@@ -31,6 +33,7 @@ public class AdminAnnouncementController {
     }
 
     @PutMapping("/{id}")
+    @CacheEvict(value = {"announcement:list", "announcement:carousel"}, allEntries = true)
     public R<String> update(@PathVariable Long id, @RequestBody Announcement announcement) {
         announcement.setId(id);
         announcementService.updateById(announcement);
@@ -38,12 +41,14 @@ public class AdminAnnouncementController {
     }
 
     @DeleteMapping("/{id}")
+    @CacheEvict(value = {"announcement:list", "announcement:carousel"}, allEntries = true)
     public R<String> delete(@PathVariable Long id) {
         announcementService.removeById(id);
         return R.ok("删除成功");
     }
 
     @PostMapping("/{id}/carousel")
+    @CacheEvict(value = {"announcement:list", "announcement:carousel"}, allEntries = true)
     public R<String> toggleCarousel(@PathVariable Long id, @RequestParam int isCarousel, @RequestParam(defaultValue = "0") int sort) {
         Announcement announcement = announcementService.getById(id);
         if (announcement == null) {

@@ -64,9 +64,7 @@ export function toggleCarousel(id: number, isCarousel: number, sort = 0) {
 export function uploadAttachment(id: number, file: File) {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post(`/admin/announcements/${id}/attachment`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  return request.post(`/admin/announcements/${id}/attachment`, formData)
 }
 
 export function deleteAttachment(id: number, attachmentId: number) {
@@ -76,7 +74,5 @@ export function deleteAttachment(id: number, attachmentId: number) {
 export function uploadImage(file: File) {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post<any, { data: string }>('/upload/image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  return request.post<any, { data: string }>('/upload/image', formData)
 }
