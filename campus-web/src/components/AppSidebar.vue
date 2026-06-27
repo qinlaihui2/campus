@@ -121,7 +121,7 @@ function handleCommand(cmd: string) {
       router.push('/login')
     }).catch(() => {})
   } else if (cmd === 'profile') {
-    router.push('/my')
+    router.push('/profile')
   }
 }
 </script>
