@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -102,6 +102,13 @@ defineEmits<{
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 页面刷新后加载用户信息（不然 admin 菜单不显示）
+onMounted(async () => {
+  if (!userStore.userInfo) {
+    await userStore.fetchUserInfo()
+  }
+})
 
 const isAdmin = computed(() => userStore.userInfo?.role === 'ADMIN')
 
