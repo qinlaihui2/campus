@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> implements CourseService {
 
     private final CourseChapterMapper chapterMapper;
+    private final CourseVideoMapper videoMapper;
     private final CourseCommentMapper commentMapper;
     private final CourseCommentLikeMapper commentLikeMapper;
     private final CourseLikeMapper likeMapper;
@@ -70,9 +71,22 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             cv.setId(ch.getId());
             cv.setTitle(ch.getTitle());
             cv.setDescription(ch.getDescription());
-            cv.setVideoUrl(ch.getVideoUrl());
-            cv.setDuration(ch.getDuration());
             cv.setSortOrder(ch.getSortOrder());
+            // 加载该章节下的视频列表
+            List<CourseVideo> videos = videoMapper.selectList(
+                    new LambdaQueryWrapper<CourseVideo>()
+                            .eq(CourseVideo::getChapterId, ch.getId())
+                            .eq(CourseVideo::getDeleted, 0)
+                            .orderByAsc(CourseVideo::getSortOrder));
+            cv.setVideos(videos.stream().map(v -> {
+                VideoVO vv = new VideoVO();
+                vv.setId(v.getId());
+                vv.setTitle(v.getTitle());
+                vv.setVideoUrl(v.getVideoUrl());
+                vv.setDuration(v.getDuration());
+                vv.setSortOrder(v.getSortOrder());
+                return vv;
+            }).collect(Collectors.toList()));
             return cv;
         }).collect(Collectors.toList()));
 
@@ -296,6 +310,39 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             chapter.setDeleted(1);
             chapterMapper.updateById(chapter);
         }
+    }
+
+    // ========== Video ==========
+
+    @Override
+    public void addVideo(Long courseId, Long chapterId, CourseVideo video) {
+        CourseChapter chapter = chapterMapper.selectById(chapterId);
+        if (chapter == null || !chapter.getCourseId().equals(courseId)) {
+            throw new BusinessException(ResultCode.NOT_FOUND);
+        }
+        video.setChapterId(chapterId);
+        video.setCreatedAt(LocalDateTime.now());
+        videoMapper.insert(video);
+    }
+
+    @Override
+    public void updateVideo(Long courseId, Long chapterId, Long videoId, CourseVideo video) {
+        CourseVideo existing = videoMapper.selectById(videoId);
+        if (existing == null || !existing.getChapterId().equals(chapterId)) {
+            throw new BusinessException(ResultCode.NOT_FOUND);
+        }
+        video.setId(videoId);
+        videoMapper.updateById(video);
+    }
+
+    @Override
+    public void deleteVideo(Long courseId, Long chapterId, Long videoId) {
+        CourseVideo video = videoMapper.selectById(videoId);
+        if (video == null || !video.getChapterId().equals(chapterId)) {
+            throw new BusinessException(ResultCode.NOT_FOUND);
+        }
+        video.setDeleted(1);
+        videoMapper.updateById(video);
     }
 
     // ========== Helpers ==========

@@ -1,87 +1,23 @@
 <template>
   <div class="chat-layout">
-    <!-- 左侧会话列表 -->
-    <aside class="chat-sidebar">
-      <div class="sidebar-header">
-        <h2>校圈</h2>
-        <el-button type="primary" size="small" @click="startNewChat">
-          <el-icon><Plus /></el-icon> 新对话
-        </el-button>
-      </div>
-
-      <!-- 主导航 -->
-      <nav class="sidebar-nav">
-        <router-link to="/" class="nav-item" :class="{ active: $route.path === '/' }">
-          <el-icon><ChatDotRound /></el-icon>
-          <span>AI 对话</span>
-        </router-link>
-        <router-link to="/courses" class="nav-item" :class="{ active: $route.path.startsWith('/courses') }">
-          <el-icon><VideoCamera /></el-icon>
-          <span>课程学习</span>
-        </router-link>
-        <router-link to="/square" class="nav-item" :class="{ active: $route.path.startsWith('/square') }">
-          <el-icon><Grid /></el-icon>
-          <span>问答广场</span>
-        </router-link>
-        <router-link to="/lost-found" class="nav-item" :class="{ active: $route.path.startsWith('/lost-found') }">
-          <el-icon><Search /></el-icon>
-          <span>失物招领</span>
-        </router-link>
-        <router-link to="/my" class="nav-item" :class="{ active: $route.path.startsWith('/my') }">
-          <el-icon><User /></el-icon>
-          <span>我的</span>
-        </router-link>
-        <router-link to="/messages" class="nav-item" :class="{ active: $route.path === '/messages' }">
-          <el-icon><ChatLineSquare /></el-icon>
-          <span>消息</span>
-          <span v-if="unreadCount > 0" class="nav-badge">{{ unreadCount }}</span>
-        </router-link>
-        <router-link to="/announcements" class="nav-item" :class="{ active: $route.path.startsWith('/announcements') }">
-          <el-icon><Notification /></el-icon>
-          <span>公告通知</span>
-        </router-link>
-        <router-link v-if="userStore.userInfo?.role === 'ADMIN'" to="/knowledge" class="nav-item" :class="{ active: $route.path === '/knowledge' }">
-          <el-icon><FolderOpened /></el-icon>
-          <span>知识库管理</span>
-        </router-link>
-        <router-link v-if="userStore.userInfo?.role === 'ADMIN'" to="/admin/announcements" class="nav-item" :class="{ active: $route.path === '/admin/announcements' }">
-          <el-icon><Setting /></el-icon>
-          <span>公告管理</span>
-        </router-link>
-      </nav>
-
-      <div class="sidebar-divider" />
-
-      <div class="conversation-list">
-        <div class="conv-list-title">历史会话</div>
-        <div v-for="conv in conversations" :key="conv.id" class="conv-item"
-          :class="{ active: currentConvId === conv.id }" @click="switchConversation(conv.id)">
-          <div class="conv-title">{{ conv.title }}</div>
-          <div class="conv-time">{{ formatTime(conv.updatedAt) }}</div>
-          <el-button class="conv-delete" text size="small" @click.stop="handleDelete(conv.id)">
-            <el-icon><Delete /></el-icon>
-          </el-button>
+    <!-- 左侧边栏 -->
+    <AppSidebar :show-new-chat="true" :unread-count="unreadCount" @new-chat="startNewChat">
+      <template #conversations>
+        <div class="sidebar-divider" />
+        <div class="conversation-list">
+          <div class="conv-list-title">历史会话</div>
+          <div v-for="conv in conversations" :key="conv.id" class="conv-item"
+            :class="{ active: currentConvId === conv.id }" @click="switchConversation(conv.id)">
+            <div class="conv-title">{{ conv.title }}</div>
+            <div class="conv-time">{{ formatTime(conv.updatedAt) }}</div>
+            <el-button class="conv-delete" text size="small" @click.stop="handleDelete(conv.id)">
+              <el-icon><Delete /></el-icon>
+            </el-button>
+          </div>
+          <div v-if="conversations.length === 0" class="empty-conv">暂无对话</div>
         </div>
-        <div v-if="conversations.length === 0" class="empty-conv">暂无对话</div>
-      </div>
-
-      <div class="sidebar-footer">
-        <el-dropdown @command="handleCommand">
-          <span class="user-info">
-            <el-avatar :size="32" :src="getAvatarUrl(userStore.userInfo?.avatar)">
-              <el-icon><UserFilled /></el-icon>
-            </el-avatar>
-            <span class="username">{{ userStore.userInfo?.nickname || '用户' }}</span>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </div>
-    </aside>
+      </template>
+    </AppSidebar>
 
     <!-- 主聊天区域 -->
     <main class="chat-main">
@@ -227,6 +163,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import AppSidebar from '@/components/AppSidebar.vue'
 import { getConversations, getMessages, deleteConversation, feedbackMessage, type Conversation, type Message } from '@/api/chat'
 import { getUnreadCount } from '@/api/message'
 import { uploadImage } from '@/api/announcement'
@@ -259,11 +196,11 @@ const suggestions = [
   '补考和重修的区别？',
 ]
 
-const md = new MarkdownIt({
+const md: MarkdownIt = new MarkdownIt({
   html: false,
   breaks: true,
   linkify: true,
-  highlight(str: string, lang: string) {
+  highlight(str: string, lang: string): string {
     if (lang && hljs.getLanguage(lang)) {
       try {
         return `<pre><code class="hljs language-${lang}">${hljs.highlight(str, { language: lang }).value}</code></pre>`
@@ -580,74 +517,10 @@ function scrollToBottom() {
   height: 100vh;
 }
 
-.chat-sidebar {
-  width: 280px;
-  background: #f5f7fa;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #e4e7ed;
-}
-
-.sidebar-nav {
-  padding: 0 8px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  color: #606266;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.15s;
-  margin-bottom: 2px;
-}
-
-.nav-item:hover {
-  background: #e6f0ff;
-  color: #409eff;
-}
-
-.nav-item.active {
-  background: #e6f0ff;
-  color: #409eff;
-  font-weight: 500;
-}
-
-.avatar-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.nav-badge {
-  margin-left: auto;
-  background: #f56c6c;
-  color: #fff;
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
-}
-
 .sidebar-divider {
   height: 1px;
   background: #e4e7ed;
   margin: 8px 16px;
-}
-
-.sidebar-header {
-  padding: 16px;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.sidebar-header h2 {
-  font-size: 18px;
-  margin: 0 0 12px;
-  color: #303133;
 }
 
 .conv-list-title {

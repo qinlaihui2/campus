@@ -1,55 +1,56 @@
 <template>
-  <div class="detail-page">
-    <div class="detail-container" v-if="course">
-      <div class="back-bar">
+  <div class="course-page">
+    <div class="course-container" v-if="course">
+      <!-- 顶部返回 -->
+      <div class="top-bar">
         <el-button text @click="$router.push('/courses')">
           <el-icon><ArrowLeft /></el-icon> 返回课程
         </el-button>
+        <span class="top-title">{{ course.title }}</span>
       </div>
 
-      <div class="detail-layout">
-        <!-- 左侧：视频 + 大纲 -->
-        <div class="detail-left">
-          <div class="video-box">
-            <video v-if="currentVideo" :src="getVideoUrl(currentVideo)" controls class="video-player"
-              autoplay />
-            <div v-else class="video-empty">
-              <el-icon :size="48"><VideoCamera /></el-icon>
-              <p>请选择章节开始学习</p>
+      <div class="course-layout">
+        <!-- 左侧：播放器 + 信息 + 评论 -->
+        <div class="course-left">
+          <div class="player-box">
+            <video v-if="currentVideo" :src="getVideoUrl(currentVideo.videoUrl)" controls class="player"
+              autoplay :key="currentVideo.id" />
+            <div v-else class="player-empty">
+              <el-icon :size="56"><VideoCamera /></el-icon>
+              <p>选择右侧视频开始学习</p>
             </div>
           </div>
 
-          <div class="course-info-bar">
-            <h2 class="course-title">{{ course.title }}</h2>
-            <div class="course-stats">
+          <!-- 当前视频信息 -->
+          <div class="video-info" v-if="currentVideo">
+            <h2 class="video-title">{{ currentVideo.title }}</h2>
+            <div class="video-meta">
               <span>{{ course.instructor }}</span>
               <span>{{ formatNum(course.viewCount) }} 次播放</span>
-              <span>{{ course.chapterCount }} 课时</span>
             </div>
           </div>
 
-          <!-- 章节大纲 -->
-          <div class="chapter-list">
-            <h3>课程大纲</h3>
-            <div v-for="(ch, i) in course.chapters" :key="ch.id" class="chapter-item"
-              :class="{ active: currentIndex === i }" @click="playChapter(ch, i)">
-              <span class="ch-index">{{ i + 1 }}</span>
-              <div class="ch-info">
-                <div class="ch-title">{{ ch.title }}</div>
-                <div class="ch-meta" v-if="ch.description">{{ ch.description }}</div>
-              </div>
-              <span class="ch-duration" v-if="ch.duration">{{ formatDuration(ch.duration) }}</span>
+          <!-- 课程信息 + 操作 -->
+          <div class="course-desc-card">
+            <p>{{ course.description || '暂无简介' }}</p>
+            <div class="course-actions">
+              <el-button :type="course.liked ? 'danger' : 'default'" size="small" @click="handleLike">
+                <el-icon><CaretTop /></el-icon> 点赞 {{ course.likeCount }}
+              </el-button>
+              <el-button :type="course.favorited ? 'warning' : 'default'" size="small" @click="handleFavorite">
+                <el-icon><Star /></el-icon> {{ course.favorited ? '已收藏' : '收藏' }}
+              </el-button>
             </div>
           </div>
 
           <!-- 评论区 -->
-          <div class="comment-section">
-            <h3>评论</h3>
-            <div class="comment-post">
+          <div class="comment-box">
+            <h3>评论 ({{ comments.length }})</h3>
+            <div class="comment-input">
               <el-input v-model="commentText" type="textarea" :rows="2"
-                :placeholder="replyTarget ? '回复 @' + replyTarget.nickname + '...' : '写下你的评论...'"
+                :placeholder="replyTarget ? '回复 @' + replyTarget.nickname + '...' : '说点什么...'"
                 resize="none" />
-              <div class="comment-post-actions">
+              <div class="comment-actions">
                 <el-button v-if="replyTarget" size="small" text @click="cancelReply">取消回复</el-button>
                 <el-button size="small" type="primary" :disabled="!commentText.trim()" @click="handleAddComment">发表</el-button>
               </div>
@@ -65,23 +66,45 @@
           </div>
         </div>
 
-        <!-- 右侧：课程信息 + 操作 -->
-        <div class="detail-right">
-          <div class="side-card">
-            <div class="side-cover">
-              <img v-if="course.coverImage" :src="getImageUrl(course.coverImage)" />
-              <div v-else class="cover-placeholder">
-                <el-icon :size="40"><VideoCamera /></el-icon>
-              </div>
+        <!-- 右侧：B站风格合集侧边栏 -->
+        <div class="course-right">
+          <div class="playlist-sidebar">
+            <div class="playlist-header">
+              <span>合集</span>
+              <span class="playlist-count">{{ totalVideos }} 个视频</span>
             </div>
-            <p class="side-desc">{{ course.description || '暂无简介' }}</p>
-            <div class="side-actions">
-              <el-button :type="course.liked ? 'danger' : 'default'" @click="handleLike">
-                <el-icon><CaretTop /></el-icon> 点赞 {{ course.likeCount }}
-              </el-button>
-              <el-button :type="course.favorited ? 'warning' : 'default'" @click="handleFavorite">
-                <el-icon><Star /></el-icon> {{ course.favorited ? '已收藏' : '收藏' }} {{ course.favoriteCount }}
-              </el-button>
+            <div class="playlist-body">
+              <div v-for="(ch, ci) in course.chapters" :key="ch.id" class="chapter-group">
+                <!-- 章节标题（可折叠） -->
+                <div class="chapter-header" @click="toggleChapter(ci)">
+                  <el-icon :size="14" class="fold-icon">
+                    <ArrowRight v-if="collapsedChapters.has(ci)" />
+                    <ArrowDown v-else />
+                  </el-icon>
+                  <span class="chapter-label">{{ ch.title }}</span>
+                  <span class="chapter-count">{{ ch.videos?.length || 0 }}P</span>
+                </div>
+
+                <!-- 视频列表 -->
+                <div v-if="!collapsedChapters.has(ci)" class="video-list">
+                  <div
+                    v-for="v in ch.videos"
+                    :key="v.id"
+                    class="video-item"
+                    :class="{ playing: currentVideo?.id === v.id }"
+                    @click="playVideo(v, ch, ci)"
+                  >
+                    <span class="vi-index">
+                      <el-icon v-if="currentVideo?.id === v.id" :size="14"><VideoPlay /></el-icon>
+                      <span v-else>{{ v.sortOrder || 1 }}</span>
+                    </span>
+                    <div class="vi-info">
+                      <div class="vi-title">{{ v.title }}</div>
+                      <div class="vi-duration" v-if="v.duration">{{ fmtDur(v.duration) }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -100,20 +123,25 @@ import { useRoute } from 'vue-router'
 import {
   getCourseDetail, likeCourse, favoriteCourse,
   getComments, addComment, likeComment, deleteComment,
-  type CourseDetailVO, type CommentVO
+  type CourseDetailVO, type CommentVO, type VideoVO, type ChapterVO
 } from '@/api/course'
 import CommentItem from '@/components/CommentItem.vue'
 
 const route = useRoute()
 const course = ref<CourseDetailVO | null>(null)
 const loading = ref(true)
-const currentVideo = ref<string | null>(null)
-const currentIndex = ref(-1)
+const currentVideo = ref<VideoVO | null>(null)
 const comments = ref<CommentVO[]>([])
 const commentText = ref('')
 const replyTarget = ref<{ id: number; nickname: string; userId: number } | null>(null)
 const sortBy = ref<'hot' | 'newest'>('hot')
 const myUserId = ref(0)
+const collapsedChapters = ref(new Set<number>())
+
+const totalVideos = computed(() => {
+  if (!course.value) return 0
+  return course.value.chapters.reduce((sum, ch) => sum + (ch.videos?.length || 0), 0)
+})
 
 try {
   const token = localStorage.getItem('accessToken')
@@ -128,24 +156,30 @@ onMounted(async () => {
     const id = Number(route.params.id)
     const res = await getCourseDetail(id)
     course.value = res.data
-    if (course.value.chapters?.length > 0) {
-      playChapter(course.value.chapters[0], 0)
+    // 自动播放第一个章节的第一个视频
+    for (const ch of course.value.chapters) {
+      if (ch.videos?.length > 0) {
+        playVideo(ch.videos[0], ch, 0)
+        break
+      }
     }
   } catch { /* ignore */ }
   finally { loading.value = false }
   loadComments()
 })
 
-function playChapter(ch: { videoUrl: string }, i: number) {
-  currentVideo.value = ch.videoUrl
-  currentIndex.value = i
+function playVideo(v: VideoVO, _ch: ChapterVO, _ci: number) {
+  currentVideo.value = v
+}
+
+function toggleChapter(ci: number) {
+  const set = new Set(collapsedChapters.value)
+  if (set.has(ci)) set.delete(ci)
+  else set.add(ci)
+  collapsedChapters.value = set
 }
 
 function getVideoUrl(url: string) {
-  if (url.startsWith('http')) return url
-  return `/api/files/${url}`
-}
-function getImageUrl(url: string) {
   if (url.startsWith('http')) return url
   return `/api/files/${url}`
 }
@@ -154,7 +188,7 @@ function formatNum(n: number) {
   if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
   return String(n)
 }
-function formatDuration(sec: number) {
+function fmtDur(sec: number) {
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return `${m}:${String(s).padStart(2, '0')}`
@@ -168,7 +202,6 @@ async function handleLike() {
     course.value.likeCount += res.data.liked ? 1 : -1
   } catch { /* ignore */ }
 }
-
 async function handleFavorite() {
   if (!course.value) return
   try {
@@ -178,7 +211,6 @@ async function handleFavorite() {
   } catch { /* ignore */ }
 }
 
-// 评论
 async function loadComments() {
   const id = Number(route.params.id)
   try {
@@ -218,66 +250,102 @@ async function handleCommentDelete(c: CommentVO) {
 </script>
 
 <style scoped>
-.detail-page { min-height: 100vh; background: #f5f6f7; padding-bottom: 40px; }
-.detail-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-.back-bar { padding: 16px 0; }
-.detail-layout { display: flex; gap: 20px; }
-.detail-left { flex: 1; min-width: 0; }
-.detail-right { width: 300px; flex-shrink: 0; }
+.course-page { min-height: 100vh; background: #f5f6f7; padding-bottom: 40px; }
+.course-container { max-width: 1400px; margin: 0 auto; padding: 0 20px; }
 
-.video-box {
-  background: #000; border-radius: 12px; overflow: hidden;
+.top-bar {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid #e3e5e7; margin-bottom: 16px;
+}
+.top-title { font-size: 14px; color: #61666d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.course-layout { display: flex; gap: 20px; align-items: flex-start; }
+
+/* ===== 左侧 ===== */
+.course-left { flex: 1; min-width: 0; }
+
+.player-box {
+  background: #000; border-radius: 10px; overflow: hidden;
   aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center;
 }
-.video-player { width: 100%; height: 100%; }
-.video-empty { text-align: center; color: #666; }
-.video-empty p { margin-top: 12px; }
+.player { width: 100%; height: 100%; outline: none; }
+.player-empty { text-align: center; color: #666; }
+.player-empty p { margin-top: 14px; font-size: 15px; }
 
-.course-info-bar { padding: 16px 0; }
-.course-title { font-size: 20px; margin: 0 0 6px; }
-.course-stats { font-size: 13px; color: #9499a0; display: flex; gap: 16px; }
+.video-info { padding: 14px 0 8px; }
+.video-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; color: #18191c; }
+.video-meta { font-size: 13px; color: #9499a0; display: flex; gap: 16px; }
 
-.chapter-list {
+.course-desc-card {
   background: #fff; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
 }
-.chapter-list h3 { font-size: 16px; margin: 0 0 12px; }
-.chapter-item {
-  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-  border-radius: 8px; cursor: pointer; transition: background .15s;
-}
-.chapter-item:hover { background: #f5f6f7; }
-.chapter-item.active { background: #e6f7ff; }
-.ch-index {
-  width: 24px; height: 24px; border-radius: 50%; background: #e3e5e7;
-  display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
-}
-.chapter-item.active .ch-index { background: #00aeec; color: #fff; }
-.ch-info { flex: 1; min-width: 0; }
-.ch-title { font-size: 14px; color: #18191c; }
-.ch-meta { font-size: 12px; color: #9499a0; margin-top: 2px; }
-.ch-duration { font-size: 12px; color: #9499a0; flex-shrink: 0; }
+.course-desc-card p { font-size: 13px; color: #61666d; line-height: 1.7; margin: 0 0 12px; }
+.course-actions { display: flex; gap: 8px; }
 
-/* 评论区 */
-.comment-section {
+.comment-box {
   background: #fff; border-radius: 10px; padding: 20px; margin-bottom: 16px;
 }
-.comment-section h3 { font-size: 16px; margin: 0 0 12px; }
-.comment-post { margin-bottom: 12px; }
-.comment-post-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
-.comment-sort { display: flex; gap: 0; margin-bottom: 12px; }
-.comment-sort span { font-size: 12px; color: #999; cursor: pointer; padding: 4px 10px; border-radius: 4px; }
-.comment-sort span.active { color: #00aeec; font-weight: 500; background: #e6f7ff; }
-.comment-list { border-top: 1px solid #f0f0f0; padding-top: 12px; }
+.comment-box h3 { font-size: 15px; margin: 0 0 12px; }
+.comment-input { margin-bottom: 10px; }
+.comment-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.comment-sort { display: flex; gap: 0; margin-bottom: 10px; }
+.comment-sort span { font-size: 12px; color: #9499a0; cursor: pointer; padding: 4px 10px; border-radius: 4px; }
+.comment-sort span.active { color: #00aeec; background: #e6f7ff; }
+.comment-list { border-top: 1px solid #f0f0f0; padding-top: 10px; }
 
-/* 右侧 */
-.side-card { background: #fff; border-radius: 10px; overflow: hidden; position: sticky; top: 20px; }
-.side-cover { height: 170px; background: #e3e5e7; overflow: hidden; }
-.side-cover img { width: 100%; height: 100%; object-fit: cover; }
-.cover-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: #c9cdd4; }
-.side-desc { padding: 14px 16px; font-size: 13px; color: #61666d; line-height: 1.6; margin: 0; }
-.side-actions { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+/* ===== 右侧合集侧边栏（B站风格） ===== */
+.course-right { width: 340px; flex-shrink: 0; position: sticky; top: 12px; }
+
+.playlist-sidebar {
+  background: #fff; border-radius: 10px; overflow: hidden;
+  max-height: calc(100vh - 40px); display: flex; flex-direction: column;
+}
+.playlist-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; border-bottom: 1px solid #f0f0f0;
+  font-size: 14px; font-weight: 600;
+}
+.playlist-count { font-size: 12px; color: #9499a0; font-weight: 400; }
+.playlist-body { overflow-y: auto; flex: 1; }
+
+.chapter-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 14px; cursor: pointer; font-size: 13px; font-weight: 600;
+  background: #f9f9f9; border-bottom: 1px solid #f0f0f0;
+  transition: background .15s;
+}
+.chapter-header:hover { background: #f0f0f0; }
+.fold-icon { color: #9499a0; flex-shrink: 0; }
+.chapter-label { flex: 1; color: #18191c; }
+.chapter-count { font-size: 11px; color: #9499a0; font-weight: 400; }
+
+.video-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 10px 30px; cursor: pointer;
+  border-bottom: 1px solid #fafafa;
+  transition: background .12s;
+}
+.video-item:hover { background: #f5f6f7; }
+.video-item.playing { background: #e6f7ff; }
+.vi-index {
+  width: 24px; text-align: center; font-size: 12px; color: #9499a0;
+  flex-shrink: 0;
+}
+.video-item.playing .vi-index { color: #00aeec; }
+.vi-info { flex: 1; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.vi-title {
+  font-size: 13px; color: #18191c; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.video-item.playing .vi-title { color: #00aeec; font-weight: 600; }
+.vi-duration { font-size: 11px; color: #c0c4cc; flex-shrink: 0; }
 
 .loading-wrap { display: flex; justify-content: center; padding: 80px 0; }
 .loading-icon { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+@media (max-width: 900px) {
+  .course-layout { flex-direction: column; }
+  .course-right { width: 100%; position: static; max-height: none; }
+  .playlist-sidebar { max-height: 400px; }
+}
 </style>

@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.common.entity.User;
 import com.campus.common.exception.BusinessException;
 import com.campus.common.mapper.UserMapper;
+import com.campus.common.notification.NotificationEvent;
+import com.campus.common.notification.NotificationHelper;
 import com.campus.common.result.ResultCode;
 import com.campus.square.dto.CommentVO;
 import com.campus.square.entity.SquareComment;
@@ -15,8 +17,10 @@ import com.campus.square.mapper.SquareCommentMapper;
 import com.campus.square.mapper.SquareCommentLikeMapper;
 import com.campus.square.dto.PublishRequest;
 import com.campus.square.dto.SquarePostVO;
+import com.campus.square.entity.SquareFavorite;
 import com.campus.square.entity.SquareLike;
 import com.campus.square.entity.SquarePost;
+import com.campus.square.mapper.SquareFavoriteMapper;
 import com.campus.square.mapper.SquareLikeMapper;
 import com.campus.square.mapper.SquarePostMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +40,12 @@ import java.util.stream.Collectors;
 public class SquarePostServiceImpl extends ServiceImpl<SquarePostMapper, SquarePost> implements com.campus.square.service.SquarePostService {
 
     private final SquareLikeMapper squareLikeMapper;
+    private final SquareFavoriteMapper squareFavoriteMapper;
     private final SquareCommentMapper squareCommentMapper;
     private final SquareCommentLikeMapper squareCommentLikeMapper;
     private final UserMapper userMapper;
     private final RedissonClient redissonClient;
+    private final NotificationHelper notificationHelper;
 
     @Override
     public Page<SquarePostVO> listPosts(String category, String keyword, int page, int size, Long currentUserId) {
@@ -146,6 +152,19 @@ public class SquarePostServiceImpl extends ServiceImpl<SquarePostMapper, SquareP
             squareLikeMapper.insert(like);
             post.setLikeCount(post.getLikeCount() + 1);
             this.updateById(post);
+
+            // 通知帖子主人
+            if (!post.getUserId().equals(userId)) {
+                notificationHelper.send(NotificationEvent.builder()
+                        .type("LIKE")
+                        .userId(post.getUserId())
+                        .title("有人赞了你的帖子")
+                        .content("你的帖子《" + post.getTitle() + "》收到一个新赞")
+                        .targetType("POST")
+                        .targetId(postId)
+                        .build());
+            }
+
             return true;
         }
     }
@@ -158,6 +177,32 @@ public class SquarePostServiceImpl extends ServiceImpl<SquarePostMapper, SquareP
                 .orderByDesc(SquarePost::getCreatedAt);
         Page<SquarePost> result = this.page(pageParam, wrapper);
         return convertToVO(result, userId);
+    }
+
+    @Override
+    @Transactional
+    public boolean toggleFavorite(Long postId, Long userId) {
+        SquarePost post = this.getById(postId);
+        if (post == null || post.getStatus() != 1) {
+            throw new BusinessException(ResultCode.NOT_FOUND);
+        }
+
+        LambdaQueryWrapper<SquareFavorite> wrapper = new LambdaQueryWrapper<SquareFavorite>()
+                .eq(SquareFavorite::getPostId, postId)
+                .eq(SquareFavorite::getUserId, userId);
+        SquareFavorite existing = squareFavoriteMapper.selectOne(wrapper);
+
+        if (existing != null) {
+            squareFavoriteMapper.deleteById(existing.getId());
+            return false;
+        } else {
+            SquareFavorite fav = new SquareFavorite();
+            fav.setPostId(postId);
+            fav.setUserId(userId);
+            fav.setCreatedAt(LocalDateTime.now());
+            squareFavoriteMapper.insert(fav);
+            return true;
+        }
     }
 
     @Override
@@ -216,6 +261,15 @@ public class SquarePostServiceImpl extends ServiceImpl<SquarePostMapper, SquareP
                     .eq(SquareLike::getPostId, post.getId())
                     .eq(SquareLike::getUserId, currentUserId);
             vo.setLiked(squareLikeMapper.selectCount(wrapper) > 0);
+
+            try {
+                LambdaQueryWrapper<SquareFavorite> favWrapper = new LambdaQueryWrapper<SquareFavorite>()
+                        .eq(SquareFavorite::getPostId, post.getId())
+                        .eq(SquareFavorite::getUserId, currentUserId);
+                vo.setFavorited(squareFavoriteMapper.selectCount(favWrapper) > 0);
+            } catch (Exception e) {
+                vo.setFavorited(false);
+            }
         }
 
         return vo;
@@ -277,6 +331,33 @@ public class SquarePostServiceImpl extends ServiceImpl<SquarePostMapper, SquareP
         comment.setDeleted(0);
         comment.setCreatedAt(java.time.LocalDateTime.now());
         squareCommentMapper.insert(comment);
+
+        // 通知帖子主人
+        if (!post.getUserId().equals(userId)) {
+            String shortContent = content.length() > 50 ? content.substring(0, 50) + "..." : content;
+            notificationHelper.send(NotificationEvent.builder()
+                    .type(parentId != null ? "REPLY" : "COMMENT")
+                    .userId(post.getUserId())
+                    .title(parentId != null ? "有人回复了你的评论" : "有人评论了你的帖子")
+                    .content(shortContent)
+                    .targetType("POST")
+                    .targetId(postId)
+                    .build());
+        }
+
+        // 如果回复别人的评论，通知被回复的人
+        if (parentId != null && replyToUserId != null && !replyToUserId.equals(userId) && !replyToUserId.equals(post.getUserId())) {
+            String shortContent = content.length() > 50 ? content.substring(0, 50) + "..." : content;
+            notificationHelper.send(NotificationEvent.builder()
+                    .type("REPLY")
+                    .userId(replyToUserId)
+                    .title("有人回复了你的评论")
+                    .content(shortContent)
+                    .targetType("POST")
+                    .targetId(postId)
+                    .build());
+        }
+
         return toCommentVO(comment, userId);
     }
 

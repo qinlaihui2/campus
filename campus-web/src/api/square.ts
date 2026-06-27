@@ -13,6 +13,7 @@ export interface SquarePost {
   viewCount: number
   likeCount: number
   liked: boolean
+  favorited: boolean
   createdAt: string
 }
 
@@ -47,6 +48,10 @@ export function publishToSquare(data: PublishRequest) {
 
 export function likeSquarePost(id: number) {
   return request.post<any, { code: number; data: { liked: boolean } }>(`/square/${id}/like`)
+}
+
+export function favoriteSquarePost(id: number) {
+  return request.post<any, { code: number; data: { favorited: boolean } }>(`/square/${id}/favorite`)
 }
 
 export function getMyPosts(page = 1, size = 10) {

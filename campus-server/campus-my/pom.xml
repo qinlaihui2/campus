@@ -25,5 +25,10 @@
             <artifactId>campus-square</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.campus</groupId>
+            <artifactId>campus-market</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

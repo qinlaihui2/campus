@@ -129,7 +129,7 @@ function connectWebSocket(uid: number) {
         // 有新消息 → 刷新会话列表（若正在看该会话则刷新消息）
         loadConversations()
         if (currentConv.value && push.conversationId === currentConv.value.id) {
-          loadMessages(currentConv.value.id)
+          openConversation(currentConv.value)
         }
       }
     } catch { /* ignore */ }

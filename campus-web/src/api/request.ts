@@ -2,8 +2,11 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+// 生产环境用完整 URL，开发环境用 Vite 代理
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+
 const request = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE ? `${API_BASE}/api` : '/api',
   timeout: 60000,
 })
 

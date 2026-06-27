@@ -21,6 +21,8 @@ public interface SquarePostService {
 
     Page<SquarePostVO> listMyPosts(int page, int size, Long userId);
 
+    boolean toggleFavorite(Long postId, Long userId);
+
     void deletePost(Long id);
 
     // 评论

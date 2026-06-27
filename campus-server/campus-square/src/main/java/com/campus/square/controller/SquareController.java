@@ -62,6 +62,13 @@ public class SquareController {
         return R.ok(Map.of("liked", liked));
     }
 
+    @PostMapping("/{id}/favorite")
+    public R<Map<String, Object>> favorite(@PathVariable Long id) {
+        Long userId = UserContext.getUserId();
+        boolean favorited = squarePostService.toggleFavorite(id, userId);
+        return R.ok(Map.of("favorited", favorited));
+    }
+
     @GetMapping("/my")
     public R<PageResult<SquarePostVO>> myPosts(
             @RequestParam(defaultValue = "1") int page,

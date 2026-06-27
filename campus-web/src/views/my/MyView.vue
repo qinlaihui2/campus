@@ -21,22 +21,32 @@
       <!-- Waterfall Grid -->
       <div class="waterfall-grid" v-loading="loading">
         <div v-for="item in items" :key="item.id" class="card-item" @click="goDetail(item)">
-          <div class="card-cover">
-            <img v-if="item.coverImage" :src="getImageUrl(item.coverImage)" />
-            <div v-else class="cover-placeholder">
-              <el-icon :size="32"><ChatDotRound /></el-icon>
-            </div>
-            <div class="cover-overlay">
-              <div class="overlay-like">
-                <el-icon :size="14"><CaretTop /></el-icon>
-                <span>{{ formatNum(item.likeCount) }}</span>
+          <!-- 有封面时显示图片卡片 -->
+          <template v-if="getCoverImage(item)">
+            <div class="card-cover">
+              <img :src="getImageUrl(getCoverImage(item)!)" />
+              <div class="cover-overlay">
+                <div class="overlay-like">
+                  <el-icon :size="14"><CaretTop /></el-icon>
+                  <span>{{ formatNum(item.likeCount) }}</span>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="card-info">
-            <div class="card-title">{{ item.title }}</div>
-            <div class="card-desc">{{ item.description }}</div>
-          </div>
+            <div class="card-info">
+              <div class="card-title">{{ item.title }}</div>
+              <div class="card-desc">{{ item.description }}</div>
+            </div>
+          </template>
+          <!-- 无封面时显示纯文字卡片（小红书风格） -->
+          <template v-else>
+            <div class="card-text-only" :style="{ background: textCardBg(item.id) }">
+              <div class="text-card-title">{{ item.title }}</div>
+              <div class="text-card-desc">{{ item.description }}</div>
+              <div class="text-card-meta">
+                <span>{{ formatNum(item.likeCount) }} 赞</span>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -98,7 +108,29 @@ function goDetail(item: MyItemVO) {
     router.push(`/courses/${item.targetId}`)
   } else if (item.type === 'square_post') {
     router.push(`/square/${item.targetId}`)
+  } else if (item.type === 'market') {
+    router.push(`/market/${item.targetId}`)
   }
+}
+
+function getCoverImage(item: MyItemVO): string | null {
+  if (!item.coverImage) return null
+  // market 的 images 是 JSON 数组，取第一张
+  if (item.type === 'market') {
+    try {
+      const arr = JSON.parse(item.coverImage)
+      return arr.length > 0 ? arr[0] : null
+    } catch { return null }
+  }
+  return item.coverImage
+}
+
+const TEXT_CARD_COLORS = [
+  '#fef0ef', '#fdf6ec', '#eef7ee', '#eaf3fc', '#f3eefc',
+  '#fef9e7', '#eaf7f7', '#fce4ec', '#e8f5e9', '#fff3e0',
+]
+function textCardBg(id: number) {
+  return TEXT_CARD_COLORS[id % TEXT_CARD_COLORS.length]
 }
 
 function getImageUrl(url: string) {
@@ -177,6 +209,26 @@ function formatNum(n: number) {
 .card-desc {
   font-size: 11px; color: #9499a0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 文字卡片（无封面） */
+.card-text-only {
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 14px; min-height: 120px;
+}
+.text-card-title {
+  font-size: 14px; font-weight: 600; color: #18191c;
+  line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 6px;
+}
+.text-card-desc {
+  font-size: 12px; color: #9499a0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  margin-bottom: 8px;
+}
+.text-card-meta {
+  font-size: 11px; color: #c0c4cc;
 }
 
 .load-more { text-align: center; padding: 24px 0; }

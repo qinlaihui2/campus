@@ -19,5 +19,6 @@ public class SquarePostVO {
     private Integer viewCount;
     private Integer likeCount;
     private Boolean liked;
+    private Boolean favorited;
     private LocalDateTime createdAt;
 }

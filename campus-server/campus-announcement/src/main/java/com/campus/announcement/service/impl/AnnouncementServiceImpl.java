@@ -14,6 +14,8 @@ import com.campus.common.result.ResultCode;
 import com.campus.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +32,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     private final FileService fileService;
 
     @Override
+    @Cacheable(value = "announcement:list", key = "#category + ':' + #page + ':' + #size")
     public Page<Announcement> listByCategory(String category, int page, int size) {
         Page<Announcement> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<Announcement>()
@@ -43,6 +46,7 @@ public class AnnouncementServiceImpl extends ServiceImpl<AnnouncementMapper, Ann
     }
 
     @Override
+    @Cacheable("announcement:carousel")
     public List<Announcement> listCarousel() {
         LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<Announcement>()
                 .eq(Announcement::getIsCarousel, 1)

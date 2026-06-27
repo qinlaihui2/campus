@@ -42,6 +42,7 @@ class CourseServiceImplTest {
     @Mock private CourseCommentLikeMapper commentLikeMapper;
     @Mock private CourseLikeMapper likeMapper;
     @Mock private CourseFavoriteMapper favoriteMapper;
+    @Mock private CourseVideoMapper videoMapper;
     @Mock private UserMapper userMapper;
     @InjectMocks private CourseServiceImpl courseService;
 
@@ -95,6 +96,7 @@ class CourseServiceImplTest {
             ch.setId(1L); ch.setCourseId(1L); ch.setTitle("第1章"); ch.setSortOrder(1);
             when(chapterMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of(ch));
             when(chapterMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(1L);
+            when(videoMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(List.of());
             when(likeMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
             when(favoriteMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
 

@@ -1,78 +1,110 @@
-version: '3.8'
+# ============================================
+# 校圈 CampusHub - 生产部署编排
+# ============================================
+# 1. 复制 .env.example 为 .env 并修改配置
+# 2. 启动: docker compose up -d
+# 3. 查看日志: docker compose logs -f
+# ============================================
 
 services:
-  # MySQL 业务数据库
+  # ==================== 中间件 ====================
+
   mysql:
     image: mysql:8.0
     container_name: campus-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: campus_assistant
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-campus_assistant}
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ../docs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # PostgreSQL + pgvector 向量数据库
   postgres:
     image: pgvector/pgvector:pg16
     container_name: campus-postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: campus_vector
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-campus_vector}
       TZ: Asia/Shanghai
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     command: postgres -c shared_preload_libraries=vector
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # Redis 缓存
   redis:
     image: redis:7-alpine
     container_name: campus-redis
     restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
+    command: >
+      redis-server
+      --appendonly yes
+      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # RabbitMQ 消息队列
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: campus-rabbitmq
     restart: always
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin123}
       TZ: Asia/Shanghai
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
 
-  # MinIO 对象存储
   minio:
     image: minio/minio:latest
     container_name: campus-minio
     restart: always
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio-data:/data
     command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
-  # Spring Boot 后端
+  # ==================== 应用服务 ====================
+
   campus-server:
     build:
       context: ../campus-server
@@ -80,32 +112,58 @@ services:
     container_name: campus-server
     restart: always
     depends_on:
-      - mysql
-      - postgres
-      - redis
-      - rabbitmq
-      - minio
+      mysql:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_assistant?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      # 数据库
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-campus_assistant}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_DATASOURCE-PG_URL: jdbc:postgresql://postgres:5432/campus_vector
-      SPRING_DATASOURCE-PG_USERNAME: postgres
-      SPRING_DATASOURCE-PG_PASSWORD: postgres
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      SPRING_DATASOURCE_PG_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-campus_vector}
+      SPRING_DATASOURCE_PG_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PG_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # Redis
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      # RabbitMQ
       SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-admin123}
+      # MinIO
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # AI
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-campus-jwt-secret-change-in-production}
+      # JVM
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseG1GC"
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/doc.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
-  # Vue3 前端 + Nginx
   nginx:
     image: nginx:alpine
     container_name: campus-nginx
     restart: always
     ports:
-      - "80:80"
+      - "${NGINX_PORT:-80}:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ../campus-web/dist:/usr/share/nginx/html:ro

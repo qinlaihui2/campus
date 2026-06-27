@@ -3,6 +3,7 @@ package com.campus.course.controller;
 import com.campus.common.result.R;
 import com.campus.course.entity.Course;
 import com.campus.course.entity.CourseChapter;
+import com.campus.course.entity.CourseVideo;
 import com.campus.course.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,6 +51,29 @@ public class AdminCourseController {
     @DeleteMapping("/{id}/chapters/{chapterId}")
     public R<String> deleteChapter(@PathVariable Long id, @PathVariable Long chapterId) {
         courseService.deleteChapter(id, chapterId);
+        return R.ok("删除成功");
+    }
+
+    // ========== Video ==========
+
+    @PostMapping("/{courseId}/chapters/{chapterId}/videos")
+    public R<String> addVideo(@PathVariable Long courseId, @PathVariable Long chapterId,
+                               @RequestBody CourseVideo video) {
+        courseService.addVideo(courseId, chapterId, video);
+        return R.ok("添加成功");
+    }
+
+    @PutMapping("/{courseId}/chapters/{chapterId}/videos/{videoId}")
+    public R<String> updateVideo(@PathVariable Long courseId, @PathVariable Long chapterId,
+                                  @PathVariable Long videoId, @RequestBody CourseVideo video) {
+        courseService.updateVideo(courseId, chapterId, videoId, video);
+        return R.ok("更新成功");
+    }
+
+    @DeleteMapping("/{courseId}/chapters/{chapterId}/videos/{videoId}")
+    public R<String> deleteVideo(@PathVariable Long courseId, @PathVariable Long chapterId,
+                                  @PathVariable Long videoId) {
+        courseService.deleteVideo(courseId, chapterId, videoId);
         return R.ok("删除成功");
     }
 }

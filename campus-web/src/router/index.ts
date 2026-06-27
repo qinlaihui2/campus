@@ -88,6 +88,30 @@ const router = createRouter({
       meta: { title: '消息', requiresAuth: true },
     },
     {
+      path: '/notifications',
+      name: 'Notifications',
+      component: () => import('@/views/notification/NotificationView.vue'),
+      meta: { title: '消息通知', requiresAuth: true },
+    },
+    {
+      path: '/market',
+      name: 'Market',
+      component: () => import('@/views/market/MarketListView.vue'),
+      meta: { title: '二手交易' },
+    },
+    {
+      path: '/market/:id',
+      name: 'MarketDetail',
+      component: () => import('@/views/market/MarketDetailView.vue'),
+      meta: { title: '商品详情' },
+    },
+    {
+      path: '/admin/courses',
+      name: 'AdminCourses',
+      component: () => import('@/views/admin/AdminCourseView.vue'),
+      meta: { title: '课程管理', requiresAuth: true, adminOnly: true },
+    },
+    {
       path: '/admin/announcements',
       name: 'AdminAnnouncements',
       component: () => import('@/views/admin/AdminAnnouncementView.vue'),

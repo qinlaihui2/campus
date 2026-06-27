@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.course.dto.*;
 import com.campus.course.entity.Course;
 import com.campus.course.entity.CourseChapter;
+import com.campus.course.entity.CourseVideo;
 
 import java.util.List;
 
@@ -39,4 +40,11 @@ public interface CourseService {
     void updateChapter(Long courseId, Long chapterId, CourseChapter chapter);
 
     void deleteChapter(Long courseId, Long chapterId);
+
+    // Video
+    void addVideo(Long courseId, Long chapterId, CourseVideo video);
+
+    void updateVideo(Long courseId, Long chapterId, Long videoId, CourseVideo video);
+
+    void deleteVideo(Long courseId, Long chapterId, Long videoId);
 }

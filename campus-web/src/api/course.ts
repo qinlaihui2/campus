@@ -16,13 +16,20 @@ export interface CourseVO {
   createdAt: string
 }
 
+export interface VideoVO {
+  id: number
+  title: string
+  videoUrl: string
+  duration: number
+  sortOrder: number
+}
+
 export interface ChapterVO {
   id: number
   title: string
   description: string
-  videoUrl: string
-  duration: number
   sortOrder: number
+  videos: VideoVO[]
 }
 
 export interface CourseDetailVO extends CourseVO {
@@ -85,4 +92,14 @@ export function likeComment(commentId: number) {
 
 export function deleteComment(commentId: number) {
   return request.delete(`/courses/comments/${commentId}`)
+}
+
+// 视频上传
+export function uploadVideo(file: File) {
+  const fd = new FormData()
+  fd.append('file', file)
+  return request.post<any, { code: number; data: string }>('/upload/video', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 600000, // 10 分钟超时，大文件需要
+  })
 }

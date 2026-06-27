@@ -2,7 +2,7 @@ import request from './request'
 
 export interface MyItemVO {
   id: number
-  type: 'course' | 'square_post'
+  type: 'course' | 'square_post' | 'market'
   targetId: number
   title: string
   description: string

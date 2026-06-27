@@ -1,5 +1,6 @@
 package com.campus.security.config;
 
+import com.campus.common.filter.TraceIdFilter;
 import com.campus.common.result.R;
 import com.campus.common.result.ResultCode;
 import com.campus.security.filter.JwtAuthenticationFilter;
@@ -43,7 +44,9 @@ public class SecurityConfig {
             "/api/lost-found/**",
             "/api/announcements/**",
             "/api/upload/image",
+            "/api/upload/video",
             "/api/files/**",
+            "/ws/**",
             "/doc.html",
             "/webjars/**",
             "/v3/api-docs/**",
@@ -76,6 +79,7 @@ public class SecurityConfig {
                             new ObjectMapper().writeValueAsString(R.fail(ResultCode.FORBIDDEN)));
                 })
             )
+            .addFilterBefore(new TraceIdFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

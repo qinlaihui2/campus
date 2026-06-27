@@ -62,11 +62,19 @@
           :class="{ active: post.liked }"
           @click="handleLike"
         >
+          <el-icon :size="20"><CaretTop /></el-icon>
+          <span>{{ post.likeCount }}</span>
+        </div>
+        <div
+          class="action-btn fav-btn"
+          :class="{ active: post.favorited }"
+          @click="handleFavorite"
+        >
           <el-icon :size="20">
-            <StarFilled v-if="post.liked" />
+            <StarFilled v-if="post.favorited" />
             <Star v-else />
           </el-icon>
-          <span>{{ post.likeCount }}</span>
+          <span>收藏</span>
         </div>
         <div class="action-btn">
           <el-icon :size="20"><View /></el-icon>
@@ -137,7 +145,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getSquarePostDetail, likeSquarePost, getComments, addComment, likeComment, deleteComment, type SquarePost, type CommentVO } from '@/api/square'
+import { getSquarePostDetail, likeSquarePost, favoriteSquarePost, getComments, addComment, likeComment, deleteComment, type SquarePost, type CommentVO } from '@/api/square'
 import CommentItem from '@/components/CommentItem.vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -263,6 +271,15 @@ async function handleLike() {
     const res = await likeSquarePost(post.value.id)
     post.value.liked = res.data.liked
     post.value.likeCount += res.data.liked ? 1 : -1
+  } catch { /* handled */ }
+}
+
+async function handleFavorite() {
+  if (!post.value) return
+  try {
+    const res = await favoriteSquarePost(post.value.id)
+    post.value.favorited = res.data.favorited
+    ElMessage.success(post.value.favorited ? '已收藏' : '已取消收藏')
   } catch { /* handled */ }
 }
 
@@ -458,6 +475,11 @@ function formatTime(dateStr: string) {
   color: #ff4757;
   border-color: #ffcdd2;
   background: #fff5f5;
+}
+.fav-btn.active {
+  color: #ffa502;
+  border-color: #ffe4b5;
+  background: #fffaf0;
 }
 
 /* 评论区 */

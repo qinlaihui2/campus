@@ -33,6 +33,8 @@
         <module>campus-message</module>
         <module>campus-lost-found</module>
         <module>campus-my</module>
+        <module>campus-notification</module>
+        <module>campus-market</module>
         <module>campus-app</module>
     </modules>
 

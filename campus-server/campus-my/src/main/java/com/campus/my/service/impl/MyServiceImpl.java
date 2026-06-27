@@ -11,10 +11,16 @@ import com.campus.course.mapper.CourseCommentMapper;
 import com.campus.course.mapper.CourseFavoriteMapper;
 import com.campus.course.mapper.CourseLikeMapper;
 import com.campus.course.mapper.CourseMapper;
+import com.campus.market.entity.MarketItem;
+import com.campus.market.entity.MarketLike;
+import com.campus.market.mapper.MarketItemMapper;
+import com.campus.market.mapper.MarketLikeMapper;
 import com.campus.my.dto.MyItemVO;
 import com.campus.my.service.MyService;
+import com.campus.square.entity.SquareFavorite;
 import com.campus.square.entity.SquareLike;
 import com.campus.square.entity.SquarePost;
+import com.campus.square.mapper.SquareFavoriteMapper;
 import com.campus.square.mapper.SquareLikeMapper;
 import com.campus.square.mapper.SquarePostMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +42,10 @@ public class MyServiceImpl implements MyService {
     private final CourseFavoriteMapper courseFavoriteMapper;
     private final CourseMapper courseMapper;
     private final SquarePostMapper squarePostMapper;
+    private final SquareFavoriteMapper squareFavoriteMapper;
     private final CourseCommentMapper courseCommentMapper;
+    private final MarketLikeMapper marketLikeMapper;
+    private final MarketItemMapper marketItemMapper;
 
     @Override
     public List<MyItemVO> listLikes(Long userId, int page, int size) {
@@ -123,6 +132,31 @@ public class MyServiceImpl implements MyService {
             }
         }
 
+        // 4. 市场商品点赞（收藏）
+        List<MarketLike> marketLikes = marketLikeMapper.selectList(
+                new LambdaQueryWrapper<MarketLike>()
+                        .eq(MarketLike::getUserId, userId)
+                        .orderByDesc(MarketLike::getCreatedAt));
+        if (!marketLikes.isEmpty()) {
+            List<Long> itemIds = marketLikes.stream().map(MarketLike::getItemId).toList();
+            Map<Long, MarketItem> itemMap = marketItemMapper.selectBatchIds(itemIds).stream()
+                    .collect(Collectors.toMap(MarketItem::getId, m -> m));
+            for (MarketLike ml : marketLikes) {
+                MarketItem m = itemMap.get(ml.getItemId());
+                if (m == null || "REMOVED".equals(m.getStatus())) continue;
+                MyItemVO vo = new MyItemVO();
+                vo.setId(ml.getId());
+                vo.setType("market");
+                vo.setTargetId(m.getId());
+                vo.setTitle(m.getTitle());
+                vo.setDescription("¥" + m.getPrice() + " · " + (m.getCategory() != null ? m.getCategory() : ""));
+                vo.setCoverImage(m.getImages());
+                vo.setLikeCount(m.getLikeCount());
+                vo.setCreatedAt(ml.getCreatedAt());
+                allItems.add(vo);
+            }
+        }
+
         // 按时间倒序 + 内存分页
         allItems.sort(Comparator.comparing(MyItemVO::getCreatedAt).reversed());
         int start = (page - 1) * size;
@@ -133,35 +167,64 @@ public class MyServiceImpl implements MyService {
 
     @Override
     public List<MyItemVO> listFavorites(Long userId, int page, int size) {
-        List<CourseFavorite> favs = courseFavoriteMapper.selectList(
+        List<MyItemVO> allItems = new ArrayList<>();
+
+        // 1. 课程收藏
+        List<CourseFavorite> courseFavs = courseFavoriteMapper.selectList(
                 new LambdaQueryWrapper<CourseFavorite>()
                         .eq(CourseFavorite::getUserId, userId)
                         .orderByDesc(CourseFavorite::getCreatedAt));
+        if (!courseFavs.isEmpty()) {
+            List<Long> courseIds = courseFavs.stream().map(CourseFavorite::getCourseId).toList();
+            Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
+                    .collect(Collectors.toMap(Course::getId, c -> c));
+            for (CourseFavorite fav : courseFavs) {
+                Course c = courseMap.get(fav.getCourseId());
+                if (c == null || c.getStatus() != 1) continue;
+                MyItemVO vo = new MyItemVO();
+                vo.setId(fav.getId());
+                vo.setType("course");
+                vo.setTargetId(c.getId());
+                vo.setTitle(c.getTitle());
+                vo.setDescription(c.getInstructor() + " · " + c.getCategory());
+                vo.setCoverImage(c.getCoverImage());
+                vo.setLikeCount(c.getFavoriteCount());
+                vo.setCreatedAt(fav.getCreatedAt());
+                allItems.add(vo);
+            }
+        }
 
-        // 内存分页
+        // 2. 广场帖子收藏
+        List<SquareFavorite> squareFavs = squareFavoriteMapper.selectList(
+                new LambdaQueryWrapper<SquareFavorite>()
+                        .eq(SquareFavorite::getUserId, userId)
+                        .orderByDesc(SquareFavorite::getCreatedAt));
+        if (!squareFavs.isEmpty()) {
+            List<Long> postIds = squareFavs.stream().map(SquareFavorite::getPostId).toList();
+            Map<Long, SquarePost> postMap = squarePostMapper.selectBatchIds(postIds).stream()
+                    .collect(Collectors.toMap(SquarePost::getId, p -> p));
+            for (SquareFavorite sf : squareFavs) {
+                SquarePost p = postMap.get(sf.getPostId());
+                if (p == null || p.getStatus() != 1) continue;
+                MyItemVO vo = new MyItemVO();
+                vo.setId(sf.getId());
+                vo.setType("square_post");
+                vo.setTargetId(p.getId());
+                vo.setTitle(p.getTitle());
+                vo.setDescription(truncate(p.getQuestion(), 60));
+                vo.setCoverImage(null);
+                vo.setLikeCount(p.getLikeCount());
+                vo.setCreatedAt(sf.getCreatedAt());
+                allItems.add(vo);
+            }
+        }
+
+        // 按时间倒序 + 内存分页
+        allItems.sort(Comparator.comparing(MyItemVO::getCreatedAt).reversed());
         int start = (page - 1) * size;
-        if (start >= favs.size()) return List.of();
-        int end = Math.min(start + size, favs.size());
-        List<CourseFavorite> pageFavs = favs.subList(start, end);
-
-        List<Long> courseIds = pageFavs.stream().map(CourseFavorite::getCourseId).toList();
-        Map<Long, Course> courseMap = courseMapper.selectBatchIds(courseIds).stream()
-                .collect(Collectors.toMap(Course::getId, c -> c));
-
-        return pageFavs.stream().map(fav -> {
-            Course c = courseMap.get(fav.getCourseId());
-            if (c == null || c.getStatus() != 1) return null;
-            MyItemVO vo = new MyItemVO();
-            vo.setId(fav.getId());
-            vo.setType("course");
-            vo.setTargetId(c.getId());
-            vo.setTitle(c.getTitle());
-            vo.setDescription(c.getInstructor() + " · " + c.getCategory());
-            vo.setCoverImage(c.getCoverImage());
-            vo.setLikeCount(c.getFavoriteCount());
-            vo.setCreatedAt(fav.getCreatedAt());
-            return vo;
-        }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+        if (start >= allItems.size()) return List.of();
+        int end = Math.min(start + size, allItems.size());
+        return allItems.subList(start, end);
     }
 
     private String truncate(String s, int maxLen) {

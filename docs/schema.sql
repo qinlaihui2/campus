@@ -327,6 +327,71 @@ CREATE TABLE square_like (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='问答广场点赞记录';
 
 -- ============================================
+-- 二手交易市场
+-- ============================================
+CREATE TABLE market_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '发布者ID',
+    title VARCHAR(200) NOT NULL COMMENT '商品标题',
+    description TEXT COMMENT '商品描述',
+    price DECIMAL(10,2) NOT NULL COMMENT '售价',
+    original_price DECIMAL(10,2) COMMENT '原价',
+    category VARCHAR(50) COMMENT '分类',
+    `condition` VARCHAR(20) COMMENT '成色: NEW/LIKE_NEW/USED/OLD',
+    images VARCHAR(2000) COMMENT '图片URL JSON数组',
+    status VARCHAR(20) NOT NULL DEFAULT 'ON_SALE' COMMENT 'ON_SALE/SOLD/REMOVED',
+    view_count INT NOT NULL DEFAULT 0 COMMENT '浏览量',
+    like_count INT NOT NULL DEFAULT 0 COMMENT '点赞数',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_user_id (user_id),
+    INDEX idx_category (category),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易商品表';
+
+CREATE TABLE market_comment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    item_id BIGINT NOT NULL COMMENT '商品ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    parent_id BIGINT COMMENT '父评论ID(回复)',
+    reply_to_user_id BIGINT COMMENT '回复目标用户ID',
+    content TEXT NOT NULL COMMENT '评论内容',
+    like_count INT NOT NULL DEFAULT 0 COMMENT '点赞数',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_item_id (item_id),
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易评论表';
+
+CREATE TABLE market_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    item_id BIGINT NOT NULL COMMENT '商品ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_item_user (item_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易点赞记录';
+
+CREATE TABLE market_offer (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    item_id BIGINT NOT NULL COMMENT '商品ID',
+    buyer_id BIGINT NOT NULL COMMENT '买家ID',
+    seller_id BIGINT NOT NULL COMMENT '卖家ID',
+    price DECIMAL(10,2) NOT NULL COMMENT '出价',
+    message VARCHAR(500) COMMENT '留言',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/ACCEPTED/REJECTED/CANCELLED',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_item_id (item_id),
+    INDEX idx_buyer_id (buyer_id),
+    INDEX idx_seller_id (seller_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='二手交易出价表';
+
+-- ============================================
 -- PostgreSQL 向量数据库 (需先安装 pgvector 扩展)
 -- ============================================
 -- CREATE EXTENSION IF NOT EXISTS vector;
@@ -342,3 +407,76 @@ CREATE TABLE square_like (
 -- );
 --
 -- CREATE INDEX ON document_chunk USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+
+-- ============================================
+-- 课程视频表 (CourseVideo 实体使用)
+-- ============================================
+CREATE TABLE course_video (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    chapter_id BIGINT NOT NULL COMMENT '章节ID',
+    title VARCHAR(200) COMMENT '视频标题',
+    video_url VARCHAR(500) COMMENT '视频URL',
+    duration INT COMMENT '视频时长(秒)',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_chapter_deleted_sort (chapter_id, deleted, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程视频表';
+
+-- ============================================
+-- 通知表 (Notification 实体使用)
+-- ============================================
+CREATE TABLE notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '接收用户ID',
+    type VARCHAR(50) COMMENT '通知类型: LIKE/COMMENT/REPLY/OFFER/SYSTEM',
+    title VARCHAR(200) COMMENT '通知标题',
+    content TEXT COMMENT '通知内容',
+    target_type VARCHAR(50) COMMENT '关联目标类型: MARKET/COURSE/SQUARE',
+    target_id BIGINT COMMENT '关联目标ID',
+    is_read TINYINT NOT NULL DEFAULT 0 COMMENT '是否已读',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_user_read_created (user_id, is_read, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
+-- ============================================
+-- 广场评论表
+-- ============================================
+CREATE TABLE square_comment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL COMMENT '帖子ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    parent_id BIGINT COMMENT '父评论ID(回复)',
+    reply_to_user_id BIGINT COMMENT '回复目标用户ID',
+    content TEXT NOT NULL COMMENT '评论内容',
+    like_count INT NOT NULL DEFAULT 0 COMMENT '点赞数',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_post_id (post_id),
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='广场评论表';
+
+-- ============================================
+-- 广场收藏和评论点赞表
+-- ============================================
+CREATE TABLE square_favorite (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    post_id BIGINT NOT NULL COMMENT '帖子ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_post_user (post_id, user_id),
+    INDEX idx_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='广场收藏记录';
+
+CREATE TABLE square_comment_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    comment_id BIGINT NOT NULL COMMENT '评论ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_comment_user (comment_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='广场评论点赞记录';

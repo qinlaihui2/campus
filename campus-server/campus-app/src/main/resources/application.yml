@@ -24,6 +24,12 @@ spring:
     username: postgres
     password: postgres
 
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000  # 默认 1 小时 (ms)
+      cache-null-values: false
+
   data:
     redis:
       host: localhost
@@ -47,8 +53,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 100MB
+      max-file-size: 500MB
+      max-request-size: 600MB
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml

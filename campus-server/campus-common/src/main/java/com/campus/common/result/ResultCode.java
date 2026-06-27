@@ -37,7 +37,20 @@ public enum ResultCode {
     // 对话模块 4xxx
     CONVERSATION_NOT_FOUND(4001, "会话不存在"),
     AI_SERVICE_ERROR(4002, "AI服务异常，请稍后重试"),
-    RAG_RETRIEVAL_FAILED(4003, "知识检索失败");
+    RAG_RETRIEVAL_FAILED(4003, "知识检索失败"),
+
+    // 交易市场 5xxx
+    ITEM_NOT_FOUND(5001, "商品不存在"),
+    ITEM_NOT_YOURS(5002, "无权操作此商品"),
+    ITEM_SOLD(5003, "商品已售出"),
+    ITEM_OFFLINE(5004, "商品已下架"),
+    OFFER_NOT_FOUND(5005, "报价不存在"),
+    OFFER_NOT_PENDING(5006, "报价不在待处理状态"),
+    CANNOT_OFFER_OWN_ITEM(5007, "不能给自己的商品报价"),
+    INVALID_PRICE(5008, "价格无效"),
+
+    // 通知模块 6xxx
+    NOTIFICATION_NOT_FOUND(6001, "通知不存在");
 
     private final int code;
     private final String message;

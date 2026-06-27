@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.common.entity.User;
 import com.campus.common.exception.BusinessException;
 import com.campus.common.mapper.UserMapper;
+import com.campus.common.notification.NotificationEvent;
+import com.campus.common.notification.NotificationHelper;
 import com.campus.common.result.ResultCode;
 import com.campus.message.dto.ConversationVO;
 import com.campus.message.entity.Conversation;
@@ -33,6 +35,7 @@ public class MessageServiceImpl extends ServiceImpl<ImConversationMapper, Conver
 
     private final ImMessageMapper messageMapper;
     private final UserMapper userMapper;
+    private final NotificationHelper notificationHelper;
 
     @Override
     public Page<ConversationVO> getConversations(Long userId, int page, int size) {
@@ -109,6 +112,17 @@ public class MessageServiceImpl extends ServiceImpl<ImConversationMapper, Conver
         if (ChatWebSocketServer.isOnline(toUserId)) {
             ChatWebSocketServer.sendToUser(toUserId, new MessagePushVO(
                     "NEW_MESSAGE", conv.getId(), senderId, content, type, null, message.getCreatedAt()));
+        } else {
+            // 对方离线时发送通知
+            String shortContent = content.length() > 50 ? content.substring(0, 50) + "..." : content;
+            notificationHelper.send(NotificationEvent.builder()
+                    .type("SYSTEM")
+                    .userId(toUserId)
+                    .title("新消息")
+                    .content("你收到了一条新消息: " + shortContent)
+                    .targetType("MESSAGE")
+                    .targetId(conv.getId())
+                    .build());
         }
 
         return message;
