@@ -65,6 +65,7 @@ onMounted(async () => {
 })
 
 function getImageUrl(coverImage: string) {
+  if (!coverImage) return ''
   return assetUrl(`/api/files/${coverImage}`)
 }
 function formatDate(dateStr: string) {

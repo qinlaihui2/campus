@@ -266,6 +266,7 @@ async function removeAttachment(attId: number) {
 }
 
 function getImageUrl(coverImage: string) {
+  if (!coverImage) return ''
   return assetUrl(`/api/files/${coverImage}`)
 }
 
