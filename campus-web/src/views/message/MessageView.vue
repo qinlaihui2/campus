@@ -104,7 +104,7 @@ import {
 import { uploadImage } from '@/api/announcement'
 import EmojiPicker from '@/components/EmojiPicker.vue'
 import type { Emoji } from '@/api/emoji'
-import { assetUrl } from '@/utils/assetUrl'
+import { assetUrl, apiBaseUrl } from '@/utils/assetUrl'
 
 const userId = ref<number>(0)
 const conversations = ref<Conversation[]>([])
@@ -120,8 +120,10 @@ const previewUrl = ref('')
 let ws: WebSocket | null = null
 
 function connectWebSocket(uid: number) {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${location.host}/ws/message/${uid}`
+  const base = apiBaseUrl() || `${location.protocol}//${location.host}`
+  const protocol = base.startsWith('https') ? 'wss:' : 'ws:'
+  const host = base.replace('https://', '').replace('http://', '')
+  const wsUrl = `${protocol}//${host}/ws/message/${uid}`
   ws = new WebSocket(wsUrl)
   ws.onmessage = (event) => {
     try {
