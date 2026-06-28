@@ -108,6 +108,20 @@
               <el-option label="其他" value="其他" />
             </el-select>
           </el-form-item>
+          <el-form-item label="封面图">
+            <div class="cover-upload">
+              <el-input v-model="courseForm.coverImage" placeholder="封面图URL（MinIO路径）" />
+              <el-upload
+                :show-file-list="false"
+                :before-upload="handleCoverUpload"
+                accept="image/*"
+                style="display:inline-block;margin-left:8px"
+              >
+                <el-button type="primary" plain>上传</el-button>
+              </el-upload>
+            </div>
+            <img v-if="courseForm.coverImage" :src="getImageUrl(courseForm.coverImage)" class="cover-preview" />
+          </el-form-item>
           <el-form-item label="简介">
             <el-input v-model="courseForm.description" type="textarea" :rows="3" />
           </el-form-item>
@@ -126,6 +140,8 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { UploadProps } from 'element-plus'
 import { getCourses, uploadVideo, type CourseVO, type ChapterVO } from '@/api/course'
+import { uploadImage } from '@/api/announcement'
+import { assetUrl } from '@/utils/assetUrl'
 import request from '@/api/request'
 
 // ===== 课程列表 =====
@@ -143,23 +159,37 @@ async function fetchCourses() {
 // ===== 课程 CRUD =====
 const courseDialogVisible = ref(false)
 const editingCourse = ref<CourseVO | null>(null)
-const courseForm = ref({ title: '', instructor: '', category: '', description: '' })
+const courseForm = ref({ title: '', instructor: '', category: '', description: '', coverImage: '' })
 
 function openCourseDialog() {
   editingCourse.value = null
-  courseForm.value = { title: '', instructor: '', category: '', description: '' }
+  courseForm.value = { title: '', instructor: '', category: '', description: '', coverImage: '' }
   courseDialogVisible.value = true
 }
-function editCourse(row: CourseVO) {
+function editCourse(row: CourseVO & { coverImage?: string }) {
   editingCourse.value = row
   courseForm.value = {
     title: row.title,
     instructor: row.instructor,
     category: row.category,
     description: row.description,
+    coverImage: row.coverImage || '',
   }
   courseDialogVisible.value = true
 }
+async function handleCoverUpload(file: File) {
+  try {
+    const res = await uploadImage(file)
+    courseForm.value.coverImage = res.data
+    ElMessage.success('封面上传成功')
+  } catch { /* ignore */ }
+  return false
+}
+function getImageUrl(coverImage: string) {
+  if (!coverImage) return ''
+  return assetUrl(`/api/files/${coverImage}`)
+}
+
 async function handleSaveCourse() {
   try {
     if (editingCourse.value) {
@@ -320,4 +350,6 @@ onMounted(fetchCourses)
 .add-chapter { display: flex; gap: 10px; margin-top: 16px; }
 
 .upload-tip { font-size: 12px; color: #9499a0; margin-top: 4px; }
+.cover-upload { display: flex; align-items: center; }
+.cover-preview { max-height: 120px; margin-top: 8px; border-radius: 6px; }
 </style>
