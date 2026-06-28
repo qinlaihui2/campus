@@ -5,6 +5,7 @@
       <div class="square-hero">
         <h1 class="hero-title">问答广场</h1>
         <p class="hero-subtitle">发现校园里的好问题，让知识流动起来</p>
+        <el-button type="primary" class="publish-btn" @click="showPublishDialog = true">发布问题</el-button>
         <div class="search-box">
           <el-icon class="search-icon"><Search /></el-icon>
           <input
@@ -79,6 +80,30 @@
         />
       </div>
 
+      <!-- 发布弹窗 -->
+      <el-dialog v-model="showPublishDialog" title="发布问题" width="600px" top="5vh" destroy-on-close>
+        <el-form label-width="80px">
+          <el-form-item label="标题">
+            <el-input v-model="publishForm.title" placeholder="简洁概括你的问题" maxlength="200" show-word-limit />
+          </el-form-item>
+          <el-form-item label="问题描述">
+            <el-input v-model="publishForm.question" type="textarea" :rows="3" placeholder="详细描述你的问题" />
+          </el-form-item>
+          <el-form-item label="你的回答">
+            <el-input v-model="publishForm.answer" type="textarea" :rows="4" placeholder="你对这个问题的看法或解答" />
+          </el-form-item>
+          <el-form-item label="分类">
+            <el-select v-model="publishForm.category" placeholder="选择分类（可选）" clearable>
+              <el-option v-for="c in categories.filter(x => x.value)" :key="c.value" :label="c.label" :value="c.value" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="showPublishDialog = false">取消</el-button>
+          <el-button type="primary" :loading="publishing" :disabled="!publishForm.title || !publishForm.question || !publishForm.answer" @click="handlePublish">发布</el-button>
+        </template>
+      </el-dialog>
+
       <el-empty v-if="!loading && posts.length === 0" description="还没有帖子，快去对话中分享你的问答吧" />
     </div>
   </div>
@@ -89,7 +114,7 @@ import { ref, onMounted } from 'vue'
 import { assetUrl } from '@/utils/assetUrl'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getSquarePosts, getHotPosts, likeSquarePost, type SquarePost } from '@/api/square'
+import { getSquarePosts, getHotPosts, likeSquarePost, publishToSquare, type SquarePost } from '@/api/square'
 import MarkdownIt from 'markdown-it'
 
 const router = useRouter()
@@ -107,6 +132,10 @@ const activeCategory = ref('')
 const sortBy = ref<'latest' | 'hot'>('latest')
 const keyword = ref('')
 const posts = ref<SquarePost[]>([])
+const showPublishDialog = ref(false)
+const publishing = ref(false)
+const publishForm = ref({ title: '', question: '', answer: '', category: '' as string })
+
 const currentPage = ref(1)
 const pageSize = 12
 const total = ref(0)
@@ -146,6 +175,24 @@ function switchSort(sort: 'latest' | 'hot') {
 function handleSearch() {
   currentPage.value = 1
   fetchPosts()
+}
+
+async function handlePublish() {
+  if (!publishForm.value.title || !publishForm.value.question || !publishForm.value.answer) return
+  publishing.value = true
+  try {
+    await publishToSquare({
+      title: publishForm.value.title,
+      question: publishForm.value.question,
+      answer: publishForm.value.answer,
+      category: publishForm.value.category || undefined,
+    })
+    ElMessage.success('发布成功')
+    showPublishDialog.value = false
+    publishForm.value = { title: '', question: '', answer: '', category: '' }
+    fetchPosts()
+  } catch { /* handled */ }
+  finally { publishing.value = false }
 }
 
 function goDetail(id: number) {
@@ -225,7 +272,9 @@ function timeAgo(dateStr: string) {
 .hero-subtitle {
   font-size: 14px;
   color: #999;
-  margin: 0 0 20px;
+  margin: 0 0 14px;
+}
+.publish-btn { margin-bottom: 6px; }
 }
 
 /* Search */
