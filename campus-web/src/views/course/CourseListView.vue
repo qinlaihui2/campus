@@ -57,11 +57,11 @@ import { assetUrl } from '@/utils/assetUrl'
 const router = useRouter()
 const categories = [
   { label: '全部', value: '' },
-  { label: '编程开发', value: '编程开发' },
-  { label: '人工智能', value: '人工智能' },
-  { label: '数学基础', value: '数学基础' },
-  { label: '外语学习', value: '外语学习' },
-  { label: '考研辅导', value: '考研辅导' },
+  { label: '计算机', value: '计算机' },
+  { label: '外语', value: '外语' },
+  { label: '数学', value: '数学' },
+  { label: '文学', value: '文学' },
+  { label: '其他', value: '其他' },
 ]
 
 const activeCategory = ref('')
