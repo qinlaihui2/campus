@@ -65,28 +65,46 @@ import { assetUrl } from '@/utils/assetUrl'
 
 defineEmits<{ select: [emoji: Emoji] }>()
 
-const tabs = [
-  { key: '默认', label: '默认' },
-  { key: '热门', label: '热门' },
-  { key: '收藏', label: '收藏' },
+// 内置表情包，不依赖后端数据库
+const BUILTIN: Emoji[] = [
+  ...['😀','😃','😄','😁','😅','😂','🤣','😊','😇','🙂','😉','😌','😍','🥰','😘','😗'].map((c,i) => ({ id: i+1, name: '笑脸', emojiChar: c, imageUrl: '', tags: '笑', category: '默认', sortOrder: i })),
+  ...['😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏'].map((c,i) => ({ id: i+101, name: '搞怪', emojiChar: c, imageUrl: '', tags: '搞怪', category: '默认', sortOrder: i })),
+  ...['😒','🙄','😬','😮‍💨','🤥','😪','😮','😯','😲','😳','🥺','😢','😭','😤','😡','🤬'].map((c,i) => ({ id: i+201, name: '情绪', emojiChar: c, imageUrl: '', tags: '情绪', category: '默认', sortOrder: i })),
+  ...['😈','👿','👹','👺','💀','👻','👽','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀'].map((c,i) => ({ id: i+301, name: '搞怪2', emojiChar: c, imageUrl: '', tags: '搞怪', category: '热门', sortOrder: i })),
+  ...['💋','💌','💘','💝','💖','💗','💓','💞','💕','💟','❣️','❤️','🧡','💛','💚','💙'].map((c,i) => ({ id: i+401, name: '爱心', emojiChar: c, imageUrl: '', tags: '爱心', category: '热门', sortOrder: i })),
+  ...['💜','🤎','🖤','🤍','💯','💢','💥','💫','💦','💨','🕳️','💣','💬','👁️‍🗨️','🗨️','🗯️'].map((c,i) => ({ id: i+501, name: '符号', emojiChar: c, imageUrl: '', tags: '符号', category: '热门', sortOrder: i })),
+  ...['💭','🕶️','👓','🥽','🥼','🦺','👔','👕','👖','🧣','🧤','🧥','🧦','👗','👘','🥻'].map((c,i) => ({ id: i+601, name: '服饰', emojiChar: c, imageUrl: '', tags: '服饰', category: '常用', sortOrder: i })),
+  ...['🩱','🩲','🩳','👙','👚','👛','👜','👝','🎒','👞','👟','🥾','🥿','👠','👡','🩰'].map((c,i) => ({ id: i+701, name: '穿搭', emojiChar: c, imageUrl: '', tags: '穿搭', category: '常用', sortOrder: i })),
 ]
+
+// 分类：内置的 + 后端查到的合并
+const ALL: Record<string, Emoji[]> = {}
+for (const e of BUILTIN) {
+  const cat = e.category || '默认'
+  if (!ALL[cat]) ALL[cat] = []
+  ALL[cat].push(e)
+}
 
 const activeTab = ref('默认')
 const keyword = ref('')
-const currentEmojis = ref<Emoji[]>([])
+const currentEmojis = ref<Emoji[]>(ALL['默认'] || [])
 const searchResults = ref<Emoji[]>([])
-const allEmojis = ref<Record<string, Emoji[]>>({})
+const favEmojis = ref<Emoji[]>([])
 
 onMounted(async () => {
+  // 尝试从后端加载更多表情，合并到已有分类
   try {
     const res = await getEmojis()
     for (const emoji of res.data) {
       const cat = emoji.category || '默认'
-      if (!allEmojis.value[cat]) allEmojis.value[cat] = []
-      allEmojis.value[cat].push(emoji)
+      if (!ALL[cat]) ALL[cat] = []
+      // 避免重复
+      if (!ALL[cat].some(e => e.id === emoji.id)) {
+        ALL[cat].push(emoji)
+      }
     }
-    currentEmojis.value = allEmojis.value['默认'] || []
-  } catch { /* ignore */ }
+  } catch { /* 后端不可用时用内置的 */ }
+  currentEmojis.value = ALL[activeTab.value] || ALL['默认'] || []
 })
 
 function switchTab(key: string) {
@@ -94,14 +112,15 @@ function switchTab(key: string) {
   if (key === '收藏') {
     loadFavorites()
   } else {
-    currentEmojis.value = allEmojis.value[key] || []
+    currentEmojis.value = ALL[key] || []
   }
 }
 
 async function loadFavorites() {
   try {
     const res = await getFavoriteEmojis()
-    currentEmojis.value = res.data
+    favEmojis.value = res.data
+    currentEmojis.value = favEmojis.value.length > 0 ? favEmojis.value : []
   } catch { currentEmojis.value = [] }
 }
 
@@ -113,10 +132,18 @@ function handleSearch() {
     return
   }
   searchTimer = window.setTimeout(async () => {
+    // 先在内置表情里搜
+    const kw = keyword.value.toLowerCase()
+    const local = BUILTIN.filter(e =>
+      e.name.includes(kw) || e.tags.includes(kw) || e.emojiChar.includes(kw)
+    )
+    // 同时搜后端
     try {
       const res = await searchApi(keyword.value)
-      searchResults.value = res.data
-    } catch { searchResults.value = [] }
+      searchResults.value = [...local, ...res.data]
+    } catch {
+      searchResults.value = local
+    }
   }, 200)
 }
 
