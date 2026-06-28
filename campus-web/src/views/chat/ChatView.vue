@@ -59,6 +59,20 @@
           </div>
         </div>
 
+        <!-- AI 工具调用卡片 -->
+        <template v-for="(tc, idx) in toolCalls" :key="'tc' + idx">
+          <div class="tool-call-card">
+            <div class="tool-call-header" @click="tc.collapsed = !tc.collapsed">
+              <span class="tool-call-icon">{{ toolIconMap[tc.name] || '🔧' }}</span>
+              <span class="tool-call-label">正在查询{{ tc.label }}</span>
+              <span class="tool-call-arrow">{{ tc.collapsed ? '▶' : '▼' }}</span>
+            </div>
+            <div class="tool-call-result" v-show="!tc.collapsed">
+              <div class="tool-call-result-text">{{ tc.result }}</div>
+            </div>
+          </div>
+        </template>
+
         <!-- 流式输出中的消息 -->
         <div v-if="streaming" class="message-item assistant">
           <div class="message-avatar">
@@ -187,6 +201,7 @@ const inputText = ref('')
 const streaming = ref(false)
 const streamingText = ref('')
 const stoppedByUser = ref(false)
+const toolCalls = ref<{ name: string; label: string; result: string; collapsed: boolean }[]>([])
 const messageContainer = ref<HTMLElement>()
 let abortController: AbortController | null = null
 
@@ -252,6 +267,7 @@ async function loadConversations() {
 async function switchConversation(convId: number) {
   stopStreamingSilently()
   currentConvId.value = convId
+  toolCalls.value = []
   try {
     const res = await getMessages(convId)
     messages.value = res.data
@@ -266,6 +282,7 @@ function startNewChat() {
   messages.value = []
   streamingText.value = ''
   inputText.value = ''
+  toolCalls.value = []
 }
 
 async function sendMessage(presetQuestion?: string) {
@@ -283,6 +300,7 @@ async function sendMessage(presetQuestion?: string) {
   inputText.value = ''
   streaming.value = true
   streamingText.value = ''
+  toolCalls.value = []
   stoppedByUser.value = false
   await nextTick()
   scrollToBottom()
@@ -403,9 +421,25 @@ const toolNameMap: Record<string, string> = {
   searchKnowledge: '知识库',
 }
 
+const toolIconMap: Record<string, string> = {
+  searchCourses: '📚',
+  searchItems: '🛒',
+  searchLostFound: '🎒',
+  searchSquarePosts: '💬',
+  getHotPosts: '🔥',
+  searchAnnouncements: '📢',
+  searchKnowledge: '📖',
+}
+
 function handleToolCall(data: any) {
   const label = toolNameMap[data.name] || data.name
-  streamingText.value += `\n🔍 正在查询${label}...\n`
+  const result = data.result || '查询完成'
+  toolCalls.value.push({
+    name: data.name,
+    label,
+    result,
+    collapsed: false,
+  })
   scrollToBottom()
 }
 
@@ -816,5 +850,74 @@ function scrollToBottom() {
   line-height: 1.6;
   max-height: 120px;
   overflow: hidden;
+}
+
+/* ========== Agent 工具调用卡片 ========== */
+.tool-call-card {
+  margin: 0 0 12px 48px;
+  max-width: 600px;
+  border: 1px solid #e0e7ff;
+  border-radius: 10px;
+  background: #f8faff;
+  overflow: hidden;
+  animation: toolSlideIn 0.3s ease;
+}
+
+@keyframes toolSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tool-call-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.tool-call-header:hover {
+  background: #eef2ff;
+}
+
+.tool-call-icon {
+  font-size: 16px;
+}
+
+.tool-call-label {
+  flex: 1;
+  font-size: 13px;
+  color: #4a6cf7;
+  font-weight: 500;
+}
+
+.tool-call-arrow {
+  font-size: 11px;
+  color: #999;
+}
+
+.tool-call-result {
+  padding: 0 14px 12px;
+  animation: toolExpand 0.2s ease;
+}
+
+@keyframes toolExpand {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 300px; }
+}
+
+.tool-call-result-text {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+  background: #fff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
 }
 </style>
