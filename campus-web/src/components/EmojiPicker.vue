@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getEmojis, searchEmojis as searchApi, getFavoriteEmojis, type Emoji } from '@/api/emoji'
+import { searchEmojis as searchApi, getFavoriteEmojis, type Emoji } from '@/api/emoji'
 import { assetUrl } from '@/utils/assetUrl'
 
 defineEmits<{ select: [emoji: Emoji] }>()
@@ -98,19 +98,8 @@ const currentEmojis = ref<Emoji[]>(ALL['默认'] || [])
 const searchResults = ref<Emoji[]>([])
 const favEmojis = ref<Emoji[]>([])
 
-onMounted(async () => {
-  // 尝试从后端加载更多表情，合并到已有分类
-  try {
-    const res = await getEmojis()
-    for (const emoji of res.data) {
-      const cat = emoji.category || '默认'
-      if (!ALL[cat]) ALL[cat] = []
-      // 避免重复
-      if (!ALL[cat].some(e => e.id === emoji.id)) {
-        ALL[cat].push(emoji)
-      }
-    }
-  } catch { /* 后端不可用时用内置的 */ }
+onMounted(() => {
+  // 直接用内置表情，不依赖后端数据库
   currentEmojis.value = ALL[activeTab.value] || ALL['默认'] || []
 })
 
