@@ -68,6 +68,40 @@ IMG12=$(upload_img "https://picsum.photos/seed/cet4/400/300")
 [ -n "$IMG12" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE market_item SET images='[\"$IMG12\"]' WHERE title='大学英语四级词汇书+真题套装';" campus_assistant && echo "四级 OK"
 
 echo ""
-echo "=== 完成！==="
-echo "二手市场 12 件商品已配图"
-echo "问答广场和失物招领不需要图片，刷新页面即可"
+echo "=== 失物招领图片 ==="
+
+# AirPods
+LF1=$(upload_img "https://picsum.photos/seed/airpods/400/300")
+[ -n "$LF1" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF1' WHERE title='捡到一副黑色 AirPods';" campus_assistant && echo "AirPods OK"
+
+# 钥匙
+LF2=$(upload_img "https://picsum.photos/seed/keys/400/300")
+[ -n "$LF2" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF2' WHERE title='捡到一串钥匙';" campus_assistant && echo "钥匙 OK"
+
+# 双肩包
+LF3=$(upload_img "https://picsum.photos/seed/backpack/400/300")
+[ -n "$LF3" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF3' WHERE title='丢失灰色双肩包';" campus_assistant && echo "双肩包 OK"
+
+# U盘
+LF4=$(upload_img "https://picsum.photos/seed/usb/400/300")
+[ -n "$LF4" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF4' WHERE title='实验楼门口捡到U盘';" campus_assistant && echo "U盘 OK"
+
+# 笔记本
+LF5=$(upload_img "https://picsum.photos/seed/notebook/400/300")
+[ -n "$LF5" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF5' WHERE title='表白墙捡到一本笔记本';" campus_assistant && echo "笔记本 OK"
+
+# 橘猫
+LF6=$(upload_img "https://picsum.photos/seed/orangecat/400/300")
+[ -n "$LF6" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF6' WHERE title='小猫走失（橘猫）';" campus_assistant && echo "橘猫 OK"
+
+# 雨伞
+LF7=$(upload_img "https://picsum.photos/seed/umbrella/400/300")
+[ -n "$LF7" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF7' WHERE title='食堂捡到一把雨伞';" campus_assistant && echo "雨伞 OK"
+
+# 耳机索尼
+LF8=$(upload_img "https://picsum.photos/seed/sony/400/300")
+[ -n "$LF8" ] && docker exec mysql_twwr-mysql_TwWr-1 mysql -u root -proot -e "UPDATE lost_found_post SET image_urls='$LF8' WHERE title='丢失耳机 索尼 WH-1000XM4';" campus_assistant && echo "耳机 OK"
+
+echo ""
+echo "=== 全部完成！==="
+echo "二手市场 12 件 + 失物招领 8 件已配图"
