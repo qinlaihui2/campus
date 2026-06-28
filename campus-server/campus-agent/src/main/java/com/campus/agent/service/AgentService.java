@@ -111,6 +111,7 @@ public class AgentService {
 
             // 6. 流式调用 Agent
             StringBuilder fullResponse = new StringBuilder();
+            boolean[] streamed = {false}; // 标记是否有 token 通过流式到达
 
             TokenStream tokenStream = assistant.chat(convId, question);
             tokenStream.onToolExecuted(toolExecution -> {
@@ -118,6 +119,7 @@ public class AgentService {
                         toolExecution.request().arguments(), toolExecution.result());
             });
             tokenStream.onPartialResponse(token -> {
+                streamed[0] = true;
                 fullResponse.append(token);
                 try {
                     emitter.send(SseEmitter.event().name("message").data(token));
@@ -127,11 +129,21 @@ public class AgentService {
             });
             tokenStream.onCompleteResponse(response -> {
                 try {
+                    String finalText = fullResponse.toString();
+                    // 如果流式没走到 onPartialResponse，手动逐字发送
+                    if (!streamed[0]) {
+                        finalText = response.aiMessage().text();
+                        for (char c : finalText.toCharArray()) {
+                            emitter.send(SseEmitter.event().name("message").data(String.valueOf(c)));
+                            Thread.sleep(15); // 打字效果
+                        }
+                    }
+
                     // 保存 AI 回复
                     Message aiMessage = new Message();
                     aiMessage.setConversationId(convId);
                     aiMessage.setRole("assistant");
-                    aiMessage.setContent(fullResponse.toString());
+                    aiMessage.setContent(finalText);
                     aiMessage.setCreatedAt(LocalDateTime.now());
                     messageMapper.insert(aiMessage);
 
@@ -144,7 +156,7 @@ public class AgentService {
 
                     emitter.send(SseEmitter.event().name("done").data("completed"));
                     emitter.complete();
-                } catch (IOException e) {
+                } catch (IOException | InterruptedException e) {
                     log.error("SSE done 发送失败", e);
                     emitter.completeWithError(e);
                 }
