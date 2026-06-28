@@ -14,44 +14,37 @@ public class AnnouncementTool {
 
     private final AnnouncementService announcementService;
 
-    @Tool("搜索校园公告通知，按分类筛选，返回公告标题、摘要、分类、发布时间")
+    @Tool("搜索校园公告通知。当用户问通知、公告、放假、考试安排时调用")
     public String searchAnnouncements(
-            @P("公告分类，如：教务通知、校园活动、放假通知等，可选，不传则查全部") String category) {
+            @P("公告分类如教务通知、校园活动等，不指定传空") String category) {
         try {
             Page<Announcement> result = announcementService.listByCategory(
                     isNotBlank(category) ? category : null, 1, 10);
-
-            if (result.getRecords().isEmpty()) {
-                return "没有找到相关的公告";
-            }
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("共找到 ").append(result.getTotal()).append(" 条公告：\n");
-            int limit = Math.min(result.getRecords().size(), 5);
-            for (int i = 0; i < limit; i++) {
-                Announcement a = result.getRecords().get(i);
-                sb.append(i + 1).append(". ").append(a.getTitle());
-                if (a.getSummary() != null && !a.getSummary().isBlank()) {
-                    sb.append(" — ").append(a.getSummary());
-                }
-                if (a.getCategory() != null) {
-                    sb.append(" — 【").append(a.getCategory()).append("】");
-                }
-                if (a.getPublishedAt() != null) {
-                    sb.append(" — ").append(a.getPublishedAt());
-                }
-                sb.append("\n");
-            }
-            if (result.getTotal() > limit) {
-                sb.append("……还有 ").append(result.getTotal() - limit).append(" 条公告\n");
-            }
-            return sb.toString();
+            String text = formatAnnouncements(result);
+            ToolCallRecorder.record("searchAnnouncements", "分类=" + category,
+                    text.length() > 200 ? text.substring(0, 200) + "..." : text);
+            return text;
         } catch (Exception e) {
             return "查询公告时出错：" + e.getMessage();
         }
     }
 
-    private boolean isNotBlank(String s) {
-        return s != null && !s.isBlank();
+    private String formatAnnouncements(Page<Announcement> result) {
+        if (result.getRecords().isEmpty()) return "没有找到相关公告";
+        StringBuilder sb = new StringBuilder();
+        sb.append("共找到 ").append(result.getTotal()).append(" 条公告：\n");
+        int limit = Math.min(result.getRecords().size(), 5);
+        for (int i = 0; i < limit; i++) {
+            Announcement a = result.getRecords().get(i);
+            sb.append(i + 1).append(". ").append(a.getTitle());
+            if (a.getSummary() != null && !a.getSummary().isBlank())
+                sb.append(" — ").append(a.getSummary());
+            if (a.getCategory() != null) sb.append(" 【").append(a.getCategory()).append("】");
+            sb.append("\n");
+        }
+        if (result.getTotal() > limit) sb.append("……还有 ").append(result.getTotal() - limit).append(" 条\n");
+        return sb.toString();
     }
+
+    private boolean isNotBlank(String s) { return s != null && !s.isBlank(); }
 }

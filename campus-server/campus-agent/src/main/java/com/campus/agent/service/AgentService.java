@@ -2,28 +2,20 @@ package com.campus.agent.service;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.campus.agent.tool.AnnouncementTool;
-import com.campus.agent.tool.CourseTool;
-import com.campus.agent.tool.LostFoundTool;
-import com.campus.agent.tool.MarketTool;
-import com.campus.agent.tool.RagTool;
-import com.campus.agent.tool.SquareTool;
+import com.campus.agent.tool.*;
 import com.campus.chat.entity.Conversation;
 import com.campus.chat.entity.Message;
-import com.campus.chat.mapper.ConversationMapper;
 import com.campus.chat.mapper.MessageMapper;
 import com.campus.chat.service.ChatService;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.TokenStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -37,7 +29,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Agent 核心编排服务。
- * 使用 LangChain4j AiServices + Tool 机制，让 LLM 自主决策调用哪些工具。
+ * 使用非流式模型确保工具调用可靠，然后手动逐字 SSE 输出。
  */
 @Slf4j
 @Service
@@ -46,7 +38,7 @@ public class AgentService {
 
     private final MessageMapper messageMapper;
     private final ChatService chatService;
-    private final OpenAiStreamingChatModel streamingChatModel;
+    private final OpenAiChatModel chatModel;
 
     // 所有工具
     private final CourseTool courseTool;
@@ -58,11 +50,8 @@ public class AgentService {
 
     private final Executor agentExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
-    /**
-     * SSE 流式 Agent 对话
-     */
     public SseEmitter chat(Long userId, Long conversationId, String question) {
-        SseEmitter emitter = new SseEmitter(180_000L); // 3 分钟超时
+        SseEmitter emitter = new SseEmitter(180_000L);
         CompletableFuture.runAsync(() -> processChat(userId, conversationId, question, emitter), agentExecutor);
         return emitter;
     }
@@ -91,17 +80,14 @@ public class AgentService {
             messageMapper.insert(userMessage);
 
             // 3. 发送会话 ID
-            emitter.send(SseEmitter.event()
-                    .name("meta")
+            emitter.send(SseEmitter.event().name("meta")
                     .data("{\"conversationId\":" + convId + "}"));
 
-            // 4. 构建 AiServices Agent（ChatMemoryProvider 为每次请求创建独立 ChatMemory）
+            // 4. 构建非流式 Agent（非流式确保 DeepSeek 工具调用可靠）
             AiChatAssistant assistant = AiServices.builder(AiChatAssistant.class)
-                    .streamingChatLanguageModel(streamingChatModel)
-                    .chatMemoryProvider(memoryId -> {
-                        ChatMemory memory = MessageWindowChatMemory.builder()
-                                .maxMessages(20)
-                                .build();
+                    .chatLanguageModel(chatModel)
+                    .chatMemoryProvider((ChatMemoryProvider) memoryId -> {
+                        ChatMemory memory = MessageWindowChatMemory.builder().maxMessages(20).build();
                         loadHistory(memory, (Long) memoryId);
                         return memory;
                     })
@@ -109,81 +95,51 @@ public class AgentService {
                             announcementTool, ragTool)
                     .build();
 
-            // 6. 流式调用 Agent
-            StringBuilder fullResponse = new StringBuilder();
-            boolean[] streamed = {false}; // 标记是否有 token 通过流式到达
+            // 5. 调用 Agent（同步，获取完整回复）
+            String fullResponse = assistant.chat(convId, question);
 
-            TokenStream tokenStream = assistant.chat(convId, question);
-            tokenStream.onToolExecuted(toolExecution -> {
-                sendToolEvent(emitter, toolExecution.request().name(),
-                        toolExecution.request().arguments(), toolExecution.result());
-            });
-            tokenStream.onPartialResponse(token -> {
-                streamed[0] = true;
-                fullResponse.append(token);
-                try {
-                    emitter.send(SseEmitter.event().name("message").data(token));
-                } catch (IOException e) {
-                    log.error("SSE message 发送失败", e);
-                }
-            });
-            tokenStream.onCompleteResponse(response -> {
-                try {
-                    String finalText = fullResponse.toString();
-                    // 如果流式没走到 onPartialResponse，手动逐字发送
-                    if (!streamed[0]) {
-                        finalText = response.aiMessage().text();
-                        for (char c : finalText.toCharArray()) {
-                            emitter.send(SseEmitter.event().name("message").data(String.valueOf(c)));
-                            Thread.sleep(15); // 打字效果
-                        }
-                    }
+            // 6. 发送工具调用事件
+            List<ToolCallRecorder.ToolCallEvent> toolEvents = ToolCallRecorder.drain();
+            for (ToolCallRecorder.ToolCallEvent event : toolEvents) {
+                sendToolEvent(emitter, event.name(), event.arguments(), event.result());
+            }
 
-                    // 保存 AI 回复
-                    Message aiMessage = new Message();
-                    aiMessage.setConversationId(convId);
-                    aiMessage.setRole("assistant");
-                    aiMessage.setContent(finalText);
-                    aiMessage.setCreatedAt(LocalDateTime.now());
-                    messageMapper.insert(aiMessage);
+            // 7. 手动逐字流式发送
+            for (char c : fullResponse.toCharArray()) {
+                emitter.send(SseEmitter.event().name("message").data(String.valueOf(c)));
+                Thread.sleep(15);
+            }
 
-                    // 更新会话
-                    conversation.setMessageCount(conversation.getMessageCount() + 1);
-                    if (conversation.getMessageCount() == 1) {
-                        conversation.setTitle(truncateTitle(question));
-                    }
-                    chatService.updateById(conversation);
+            // 8. 保存 AI 回复
+            Message aiMessage = new Message();
+            aiMessage.setConversationId(convId);
+            aiMessage.setRole("assistant");
+            aiMessage.setContent(fullResponse);
+            aiMessage.setCreatedAt(LocalDateTime.now());
+            messageMapper.insert(aiMessage);
 
-                    emitter.send(SseEmitter.event().name("done").data("completed"));
-                    emitter.complete();
-                } catch (IOException | InterruptedException e) {
-                    log.error("SSE done 发送失败", e);
-                    emitter.completeWithError(e);
-                }
-            });
-            tokenStream.onError(error -> {
-                log.error("Agent 调用失败", error);
-                sendError(emitter, "AI服务异常: " + error.getMessage());
-                emitter.completeWithError(error);
-            });
-            tokenStream.start();
+            // 9. 更新会话
+            conversation.setMessageCount(conversation.getMessageCount() + 1);
+            if (conversation.getMessageCount() == 1) {
+                conversation.setTitle(truncateTitle(question));
+            }
+            chatService.updateById(conversation);
+
+            emitter.send(SseEmitter.event().name("done").data("completed"));
+            emitter.complete();
 
         } catch (Exception e) {
             log.error("Agent 处理异常", e);
-            sendError(emitter, "系统异常: " + e.getMessage());
+            sendError(emitter, "AI服务异常: " + e.getMessage());
             emitter.completeWithError(e);
         }
     }
 
-    /**
-     * 从 DB 加载历史消息到 ChatMemory
-     */
     private void loadHistory(ChatMemory memory, Long conversationId) {
         List<Message> dbMessages = messageMapper.selectList(
                 new LambdaQueryWrapper<Message>()
                         .eq(Message::getConversationId, conversationId)
                         .orderByAsc(Message::getCreatedAt));
-
         for (Message msg : dbMessages) {
             if ("user".equals(msg.getRole())) {
                 memory.add(dev.langchain4j.data.message.UserMessage.from(msg.getContent()));
@@ -199,14 +155,9 @@ public class AgentService {
             data.put("name", toolName);
             data.put("status", "completed");
             data.put("arguments", arguments);
-            // 截断过长结果
-            if (result != null && result.length() > 200) {
-                result = result.substring(0, 200) + "...";
-            }
+            if (result != null && result.length() > 200) result = result.substring(0, 200) + "...";
             data.put("result", result);
-            emitter.send(SseEmitter.event()
-                    .name("tool_call")
-                    .data(JSONUtil.toJsonStr(data)));
+            emitter.send(SseEmitter.event().name("tool_call").data(JSONUtil.toJsonStr(data)));
         } catch (IOException e) {
             log.warn("tool_call 事件发送失败", e);
         }
@@ -220,7 +171,6 @@ public class AgentService {
     private void sendError(SseEmitter emitter, String error) {
         try {
             emitter.send(SseEmitter.event().name("error").data(error));
-        } catch (IOException ignored) {
-        }
+        } catch (IOException ignored) {}
     }
 }
