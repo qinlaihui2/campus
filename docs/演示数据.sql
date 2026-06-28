@@ -46,14 +46,14 @@ INSERT INTO market_item (user_id, title, description, price, original_price, cat
 -- ============================================
 -- 失物招领（10条）
 -- ============================================
-INSERT INTO lost_found (type, title, description, location, contact, image_url, status, publisher_id, created_at, updated_at, deleted) VALUES
-('FOUND', '捡到一副黑色 AirPods', '在图书馆三楼阅览室捡到的，放在一个黑色保护套里，上面挂了一个皮卡丘挂件。', '图书馆三楼', '微信：nailong66', '', 'OPEN', 2, NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 14 DAY, 0),
-('LOST', '丢失校园卡一张', '去食堂的路上丢的，大概是一食堂到宿舍这段路。卡号后四位8832，卡套是蓝色的。', '一食堂附近', '电话：188xxxx5678', '', 'RESOLVED', 3, NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 12 DAY, 0),
-('FOUND', '捡到一串钥匙', '在教学楼B座208教室捡到的，钥匙扣是一个小篮球。', '教学楼B208', '送到宿管阿姨处', '', 'OPEN', 4, NOW() - INTERVAL 10 DAY, NOW() - INTERVAL 10 DAY, 0),
-('LOST', '丢失灰色双肩包', '在操场跑步时放在看台上，跑完发现不见了。灰色，品牌是小米，里面有一本高数书和一个水杯。', '操场看台', '电话：156xxxx1234', '', 'OPEN', 6, NOW() - INTERVAL 8 DAY, NOW() - INTERVAL 8 DAY, 0),
-('FOUND', '实验楼门口捡到U盘', '32G金士顿U盘，银色。里面有一些课程资料，看文件名应该是计算机系的同学。', '实验楼门口', '请到实验楼值班室认领', '', 'OPEN', 2, NOW() - INTERVAL 7 DAY, NOW() - INTERVAL 7 DAY, 0),
-('LOST', '校园卡丢失', '洗澡忘在浴室了，卡号后四位5566。挂失后找到会撤销。', '二食堂浴室', 'QQ：12345678', '', 'RESOLVED', 3, NOW() - INTERVAL 6 DAY, NOW() - INTERVAL 6 DAY, 0),
-('FOUND', '表白墙捡到一本笔记本', '绿色封面的笔记本，里面是大学英语笔记，字很好看。', '表白墙旁边', '放在表白墙桌子上', '', 'OPEN', 4, NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY, 0),
-('LOST', '小猫走失（橘猫）', '宿舍养的橘猫"大橘"昨天晚上跑出去了，一岁，公猫，已绝育。脖子戴红色项圈。', '三号宿舍楼附近', '电话/微信：177xxxx8899 有重谢！', '', 'OPEN', 6, NOW() - INTERVAL 3 DAY, NOW() - INTERVAL 3 DAY, 0),
-('FOUND', '食堂捡到一把雨伞', '黑色长柄伞，在一食堂门口捡到的。最近雨天，应该是哪位同学忘拿了。', '一食堂门口', '放在食堂失物招领处', '', 'OPEN', 2, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY, 0),
-('LOST', '丢失耳机 索尼 WH-1000XM4', '在图书馆自习时放在桌上，去上厕所回来就不见了。黑色，头戴式降噪耳机。求归还！', '图书馆四楼', '电话：189xxxx3344 归还必谢！', '', 'OPEN', 3, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, 0);
+INSERT INTO lost_found_post (type, title, description, location, contact_way, image_urls, status, publisher_id, published_at, created_at, updated_at, deleted) VALUES
+('FOUND', '捡到一副黑色 AirPods', '在图书馆三楼阅览室捡到的，放在一个黑色保护套里，上面挂了一个皮卡丘挂件。', '图书馆三楼', '微信：nailong66', '', 'OPEN', 2, NOW() - INTERVAL 14 DAY, NOW() - INTERVAL 14 DAY, NOW(), 0),
+('LOST', '丢失校园卡一张', '去食堂的路上丢的，大概是一食堂到宿舍这段路。卡号后四位8832，卡套是蓝色的。', '一食堂附近', '电话：188xxxx5678', '', 'RESOLVED', 3, NOW() - INTERVAL 12 DAY, NOW() - INTERVAL 12 DAY, NOW(), 0),
+('FOUND', '捡到一串钥匙', '在教学楼B座208教室捡到的，钥匙扣是一个小篮球。', '教学楼B208', '送到宿管阿姨处', '', 'OPEN', 4, NOW() - INTERVAL 10 DAY, NOW() - INTERVAL 10 DAY, NOW(), 0),
+('LOST', '丢失灰色双肩包', '在操场跑步时放在看台上，跑完发现不见了。灰色，品牌是小米，里面有一本高数书和一个水杯。', '操场看台', '电话：156xxxx1234', '', 'OPEN', 6, NOW() - INTERVAL 8 DAY, NOW() - INTERVAL 8 DAY, NOW(), 0),
+('FOUND', '实验楼门口捡到U盘', '32G金士顿U盘，银色。里面有一些课程资料，看文件名应该是计算机系的同学。', '实验楼门口', '请到实验楼值班室认领', '', 'OPEN', 2, NOW() - INTERVAL 7 DAY, NOW() - INTERVAL 7 DAY, NOW(), 0),
+('LOST', '校园卡丢失', '洗澡忘在浴室了，卡号后四位5566。挂失后找到会撤销。', '二食堂浴室', 'QQ：12345678', '', 'RESOLVED', 3, NOW() - INTERVAL 6 DAY, NOW() - INTERVAL 6 DAY, NOW(), 0),
+('FOUND', '表白墙捡到一本笔记本', '绿色封面的笔记本，里面是大学英语笔记，字很好看。', '表白墙旁边', '放在表白墙桌子上', '', 'OPEN', 4, NOW() - INTERVAL 5 DAY, NOW() - INTERVAL 5 DAY, NOW(), 0),
+('LOST', '小猫走失（橘猫）', '宿舍养的橘猫"大橘"昨天晚上跑出去了，一岁，公猫，已绝育。脖子戴红色项圈。', '三号宿舍楼附近', '电话/微信：177xxxx8899 有重谢！', '', 'OPEN', 6, NOW() - INTERVAL 3 DAY, NOW() - INTERVAL 3 DAY, NOW(), 0),
+('FOUND', '食堂捡到一把雨伞', '黑色长柄伞，在一食堂门口捡到的。最近雨天，应该是哪位同学忘拿了。', '一食堂门口', '放在食堂失物招领处', '', 'OPEN', 2, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 2 DAY, NOW(), 0),
+('LOST', '丢失耳机 索尼 WH-1000XM4', '在图书馆自习时放在桌上，去上厕所回来就不见了。黑色，头戴式降噪耳机。求归还！', '图书馆四楼', '电话：189xxxx3344 归还必谢！', '', 'OPEN', 3, NOW() - INTERVAL 1 DAY, NOW() - INTERVAL 1 DAY, NOW(), 0);
