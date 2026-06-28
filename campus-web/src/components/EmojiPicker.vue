@@ -85,6 +85,13 @@ for (const e of BUILTIN) {
   ALL[cat].push(e)
 }
 
+const tabs = [
+  { key: '默认', label: '默认' },
+  { key: '热门', label: '热门' },
+  { key: '常用', label: '常用' },
+  { key: '收藏', label: '收藏' },
+]
+
 const activeTab = ref('默认')
 const keyword = ref('')
 const currentEmojis = ref<Emoji[]>(ALL['默认'] || [])
