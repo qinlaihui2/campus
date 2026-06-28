@@ -305,11 +305,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
 
     @Override
     public void deleteChapter(Long courseId, Long chapterId) {
-        CourseChapter chapter = chapterMapper.selectById(chapterId);
-        if (chapter != null) {
-            chapter.setDeleted(1);
-            chapterMapper.updateById(chapter);
-        }
+        // 用 deleteById 触发 MyBatis Plus 逻辑删除，不能手动 setDeleted+updateById
+        chapterMapper.deleteById(chapterId);
     }
 
     // ========== Video ==========
@@ -341,8 +338,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         if (video == null || !video.getChapterId().equals(chapterId)) {
             throw new BusinessException(ResultCode.NOT_FOUND);
         }
-        video.setDeleted(1);
-        videoMapper.updateById(video);
+        // 用 deleteById 触发逻辑删除，不能手动 setDeleted+updateById
+        videoMapper.deleteById(videoId);
     }
 
     // ========== Helpers ==========

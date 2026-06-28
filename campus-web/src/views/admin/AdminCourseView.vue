@@ -28,8 +28,16 @@
         <div class="chapter-list" v-if="currentCourse">
           <div v-for="ch in chapters" :key="ch.id" class="chapter-block">
             <div class="ch-head">
-              <span class="ch-label">{{ ch.title }}</span>
+              <template v-if="editingChapterId === ch.id">
+                <el-input v-model="editChapterTitle" size="small" style="width:200px" />
+                <el-button size="small" type="primary" @click="saveChapterTitle(currentCourse.id, ch.id)">保存</el-button>
+                <el-button size="small" @click="editingChapterId = null">取消</el-button>
+              </template>
+              <template v-else>
+                <span class="ch-label">{{ ch.title }}</span>
+              </template>
               <div>
+                <el-button size="small" @click="startEditChapter(ch)">编辑</el-button>
                 <el-button size="small" @click="openVideoDialog(ch)">添加视频</el-button>
                 <el-button size="small" type="danger" @click="deleteChapter(currentCourse.id, ch.id)">删除</el-button>
               </div>
@@ -216,6 +224,8 @@ async function deleteCourse(id: number) {
 const chapterDialogVisible = ref(false)
 const currentCourse = ref<CourseVO | null>(null)
 const chapters = ref<ChapterVO[]>([])
+const editingChapterId = ref<number | null>(null)
+const editChapterTitle = ref('')
 const newChapterTitle = ref('')
 
 async function openChapterDialog(course: CourseVO) {
@@ -241,6 +251,19 @@ async function handleAddChapter() {
     ElMessage.success('章节已添加')
     newChapterTitle.value = ''
     await fetchChapters(currentCourse.value.id)
+  } catch { /* handled */ }
+}
+function startEditChapter(ch: ChapterVO) {
+  editingChapterId.value = ch.id
+  editChapterTitle.value = ch.title
+}
+async function saveChapterTitle(courseId: number, chapterId: number) {
+  if (!editChapterTitle.value.trim()) return
+  try {
+    await request.put(`/admin/courses/${courseId}/chapters/${chapterId}`, { title: editChapterTitle.value.trim() })
+    ElMessage.success('已更新')
+    editingChapterId.value = null
+    await fetchChapters(courseId)
   } catch { /* handled */ }
 }
 async function deleteChapter(courseId: number, chapterId: number) {
