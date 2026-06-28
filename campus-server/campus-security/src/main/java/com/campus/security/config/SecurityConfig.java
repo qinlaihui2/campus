@@ -47,6 +47,7 @@ public class SecurityConfig {
             "/api/courses/**",
             "/api/square",
             "/api/square/**",
+            "/api/agent/**",
             "/api/market",
             "/api/market/**",
             "/api/emoji",
