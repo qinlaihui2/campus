@@ -16,6 +16,7 @@ import com.campus.chat.service.ChatService;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
@@ -94,16 +95,16 @@ public class AgentService {
                     .name("meta")
                     .data("{\"conversationId\":" + convId + "}"));
 
-            // 4. 构建 ChatMemory（从 DB 加载历史，每请求新建，线程安全）
-            ChatMemory memory = MessageWindowChatMemory.builder()
-                    .maxMessages(20)
-                    .build();
-            loadHistory(memory, convId);
-
-            // 5. 构建 AiServices Agent
+            // 4. 构建 AiServices Agent（ChatMemoryProvider 为每次请求创建独立 ChatMemory）
             AiChatAssistant assistant = AiServices.builder(AiChatAssistant.class)
                     .streamingChatLanguageModel(streamingChatModel)
-                    .chatMemory(memory)
+                    .chatMemoryProvider(memoryId -> {
+                        ChatMemory memory = MessageWindowChatMemory.builder()
+                                .maxMessages(20)
+                                .build();
+                        loadHistory(memory, (Long) memoryId);
+                        return memory;
+                    })
                     .tools(courseTool, marketTool, lostFoundTool, squareTool,
                             announcementTool, ragTool)
                     .build();
