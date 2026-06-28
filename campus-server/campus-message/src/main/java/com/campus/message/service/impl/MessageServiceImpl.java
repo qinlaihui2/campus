@@ -42,6 +42,13 @@ public class MessageServiceImpl extends ServiceImpl<ImConversationMapper, Conver
         Page<Conversation> pageParam = new Page<>(page, size);
         Page<Conversation> result = (Page<Conversation>) baseMapper.selectByUser(pageParam, userId);
 
+        // 没有会话时直接返回空
+        if (result.getRecords().isEmpty()) {
+            Page<ConversationVO> empty = new Page<>(page, size, 0);
+            empty.setRecords(java.util.Collections.emptyList());
+            return empty;
+        }
+
         // Fetch peer user info
         List<Long> peerIds = result.getRecords().stream()
                 .map(c -> c.getUser1Id().equals(userId) ? c.getUser2Id() : c.getUser1Id())
