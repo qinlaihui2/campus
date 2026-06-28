@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { searchEmojis as searchApi, getFavoriteEmojis, type Emoji } from '@/api/emoji'
+import { searchEmojis as searchApi, type Emoji } from '@/api/emoji'
 import { assetUrl } from '@/utils/assetUrl'
 
 defineEmits<{ select: [emoji: Emoji] }>()
@@ -89,15 +89,12 @@ const tabs = [
   { key: '默认', label: '默认' },
   { key: '热门', label: '热门' },
   { key: '常用', label: '常用' },
-  { key: '收藏', label: '收藏' },
 ]
 
 const activeTab = ref('默认')
 const keyword = ref('')
 const currentEmojis = ref<Emoji[]>(ALL['默认'] || [])
 const searchResults = ref<Emoji[]>([])
-const favEmojis = ref<Emoji[]>([])
-
 onMounted(() => {
   // 直接用内置表情，不依赖后端数据库
   currentEmojis.value = ALL[activeTab.value] || ALL['默认'] || []
@@ -105,19 +102,7 @@ onMounted(() => {
 
 function switchTab(key: string) {
   activeTab.value = key
-  if (key === '收藏') {
-    loadFavorites()
-  } else {
-    currentEmojis.value = ALL[key] || []
-  }
-}
-
-async function loadFavorites() {
-  try {
-    const res = await getFavoriteEmojis()
-    favEmojis.value = res.data
-    currentEmojis.value = favEmojis.value.length > 0 ? favEmojis.value : []
-  } catch { currentEmojis.value = [] }
+  currentEmojis.value = ALL[key] || []
 }
 
 let searchTimer: number
