@@ -275,7 +275,6 @@ function timeAgo(dateStr: string) {
   margin: 0 0 14px;
 }
 .publish-btn { margin-bottom: 6px; }
-}
 
 /* Search */
 .search-box {
