@@ -44,7 +44,7 @@ public class MarketServiceImpl extends ServiceImpl<MarketItemMapper, MarketItem>
                                         Double minPrice, Double maxPrice,
                                         String sort, int page, int size, Long currentUserId) {
         LambdaQueryWrapper<MarketItem> wrapper = new LambdaQueryWrapper<MarketItem>()
-                .eq(MarketItem::getStatus, "ON_SALE");
+                .ne(MarketItem::getStatus, "REMOVED");
 
         if (StrUtil.isNotBlank(category)) {
             wrapper.eq(MarketItem::getCategory, category);
@@ -167,7 +167,8 @@ public class MarketServiceImpl extends ServiceImpl<MarketItemMapper, MarketItem>
         if (!item.getUserId().equals(userId)) {
             throw new BusinessException(ResultCode.ITEM_NOT_YOURS);
         }
-        this.removeById(itemId);
+        item.setStatus("REMOVED");
+        this.updateById(item);
     }
 
     @Override
