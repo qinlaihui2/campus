@@ -35,6 +35,7 @@
         <module>campus-my</module>
         <module>campus-notification</module>
         <module>campus-market</module>
+        <module>campus-agent</module>
         <module>campus-app</module>
     </modules>
 

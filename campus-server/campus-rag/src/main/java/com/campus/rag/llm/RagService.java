@@ -3,7 +3,6 @@ package com.campus.rag.llm;
 import com.campus.rag.retriever.RetrievalResult;
 import com.campus.rag.retriever.RetrieverService;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -24,6 +24,7 @@ COPY campus-announcement/pom.xml campus-announcement/
 COPY campus-my/pom.xml campus-my/
 COPY campus-market/pom.xml campus-market/
 COPY campus-notification/pom.xml campus-notification/
+COPY campus-agent/pom.xml campus-agent/
 COPY campus-app/pom.xml campus-app/
 
 RUN mvn dependency:go-offline -B -q

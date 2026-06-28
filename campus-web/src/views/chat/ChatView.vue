@@ -296,7 +296,7 @@ async function sendMessage(presetQuestion?: string) {
 
   try {
     const base = apiBaseUrl()
-    const url = `${base}/api/chat/send?${params.toString()}`
+    const url = `${base}/api/agent/chat?${params.toString()}`
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` }
     if (base) headers['ngrok-skip-browser-warning'] = 'true'
 
@@ -321,14 +321,27 @@ async function sendMessage(presetQuestion?: string) {
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
 
+      let eventType = ''
       for (const line of lines) {
         if (line.startsWith('event:')) {
-          const eventType = line.substring(6).trim()
+          eventType = line.substring(6).trim()
           continue
         }
         if (line.startsWith('data:')) {
           const data = line.substring(5).trim()
-          processSSEEvent(data)
+          if (eventType === 'tool_call') {
+            handleToolCall(JSON.parse(data))
+          } else if (eventType === 'meta') {
+            const parsed = JSON.parse(data)
+            if (parsed.conversationId) {
+              currentConvId.value = parsed.conversationId
+            }
+          } else if (eventType === 'error') {
+            ElMessage.error(data)
+          } else {
+            processSSEEvent(data)
+          }
+          eventType = ''
         }
       }
     }
@@ -378,6 +391,22 @@ function processSSEEvent(data: string) {
     streamingText.value += data
     scrollToBottom()
   }
+}
+
+const toolNameMap: Record<string, string> = {
+  searchCourses: '课程',
+  searchItems: '二手商品',
+  searchLostFound: '失物招领',
+  searchSquarePosts: '广场帖子',
+  getHotPosts: '热门帖子',
+  searchAnnouncements: '公告',
+  searchKnowledge: '知识库',
+}
+
+function handleToolCall(data: any) {
+  const label = toolNameMap[data.name] || data.name
+  streamingText.value += `\n🔍 正在查询${label}...\n`
+  scrollToBottom()
 }
 
 function stopStreamingSilently() {
