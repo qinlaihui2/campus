@@ -535,7 +535,7 @@ function openPublishDialog(msg: Message) {
     title: prevMsg?.content?.substring(0, 50) || '来自问答广场',
     question: prevMsg?.content || '',
     answer: msg.content,
-    referencesJson: msg.referencesJson || '',
+    referencesJson: msg.referencesJson || undefined,
     category: '',
   }
   publishDialogVisible.value = true
