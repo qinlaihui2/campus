@@ -525,7 +525,7 @@ async function saveProfile() {
 // 发布到广场
 const publishDialogVisible = ref(false)
 const publishing = ref(false)
-const publishForm = ref({ title: '', question: '', answer: '', referencesJson: '', category: '' })
+const publishForm = ref<{ title: string; question: string; answer: string; referencesJson: string | null; category: string }>({ title: '', question: '', answer: '', referencesJson: null, category: '' })
 
 function openPublishDialog(msg: Message) {
   // 找到前一条用户消息
@@ -535,7 +535,7 @@ function openPublishDialog(msg: Message) {
     title: prevMsg?.content?.substring(0, 50) || '来自问答广场',
     question: prevMsg?.content || '',
     answer: msg.content,
-    referencesJson: msg.referencesJson || undefined,
+    referencesJson: msg.referencesJson || null,
     category: '',
   }
   publishDialogVisible.value = true
