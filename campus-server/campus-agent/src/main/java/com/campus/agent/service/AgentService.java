@@ -98,10 +98,16 @@ public class AgentService {
             // 5. 调用 Agent（同步，获取完整回复）
             String fullResponse = assistant.chat(convId, question);
 
-            // 6. 发送工具调用事件
+            // 6. 发送工具调用事件（去重：同名工具只保留最后一次，过滤掉"没找到"）
             List<ToolCallRecorder.ToolCallEvent> toolEvents = ToolCallRecorder.drain();
-            for (ToolCallRecorder.ToolCallEvent event : toolEvents) {
-                sendToolEvent(emitter, event.name(), event.arguments(), event.result());
+            java.util.LinkedHashMap<String, ToolCallRecorder.ToolCallEvent> unique = new java.util.LinkedHashMap<>();
+            for (ToolCallRecorder.ToolCallEvent e : toolEvents) {
+                unique.put(e.name(), e);
+            }
+            for (ToolCallRecorder.ToolCallEvent e : unique.values()) {
+                if (e.result() != null && e.result().contains("没有找到")
+                        && unique.size() > 1) continue;
+                sendToolEvent(emitter, e.name(), e.arguments(), e.result());
             }
 
             // 7. 手动逐字流式发送

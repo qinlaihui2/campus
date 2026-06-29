@@ -79,7 +79,7 @@
             <el-avatar :size="36" style="background: #409eff">AI</el-avatar>
           </div>
           <div class="message-content">
-            <div class="message-text" v-html="renderMarkdown(streamingText)" /><span class="cursor">|</span>
+            <div ref="streamingEl" class="message-text" /><span class="cursor">|</span>
           </div>
         </div>
       </div>
@@ -203,6 +203,7 @@ const streamingText = ref('')
 const stoppedByUser = ref(false)
 const toolCalls = ref<{ name: string; label: string; result: string; collapsed: boolean }[]>([])
 const messageContainer = ref<HTMLElement>()
+const streamingEl = ref<HTMLElement>()
 let abortController: AbortController | null = null
 
 const suggestions = [
@@ -384,30 +385,25 @@ async function sendMessage(presetQuestion?: string) {
 }
 
 function processSSEEvent(data: string) {
-  // 先处理纯文本 token（包括纯数字，如 "8"、"500" 也会被 JSON.parse 成功解析）
-  if (data === 'completed' || data === '[DONE]') {
-    return
-  }
+  if (data === 'completed' || data === '[DONE]') return
   try {
     const parsed = JSON.parse(data)
-    // 只有对象和数组才是元数据事件，其余都是流式文本
     if (typeof parsed === 'object' && parsed !== null) {
-      if (Array.isArray(parsed)) {
-        // references
-        return
-      }
+      if (Array.isArray(parsed)) return
       if (parsed.conversationId) {
         currentConvId.value = parsed.conversationId
         return
       }
     }
-    // 数字、字符串、布尔值等原始类型 → 当作流式文本
     streamingText.value += data
     scrollToBottom()
   } catch {
-    // 不是合法 JSON，直接当流式文本追加
     streamingText.value += data
     scrollToBottom()
+  }
+  // 直接操作 DOM，绕过 Vue 批量渲染，实现逐字流式
+  if (streamingEl.value) {
+    streamingEl.value.innerHTML = renderMarkdown(streamingText.value)
   }
 }
 
