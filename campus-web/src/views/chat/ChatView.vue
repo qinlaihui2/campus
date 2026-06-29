@@ -357,8 +357,14 @@ async function sendMessage(presetQuestion?: string) {
             }
           } else if (eventType === 'error') {
             ElMessage.error(data)
-          } else {
-            processSSEEvent(data)
+          } else if (data !== 'completed' && data !== '[DONE]') {
+            // 流式文本：追加到 reactive + 直接操作 DOM
+            streamingText.value += data
+            if (streamingEl.value) {
+              streamingEl.value.innerHTML = renderMarkdown(streamingText.value)
+            }
+            scrollToBottom()
+            await new Promise(r => setTimeout(r, 25)) // 逐字视觉间隔
           }
           eventType = ''
         }
