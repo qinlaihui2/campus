@@ -552,7 +552,7 @@ async function handlePublish() {
       title: publishForm.value.title,
       question: publishForm.value.question,
       answer: publishForm.value.answer,
-      referencesJson: publishForm.value.referencesJson,
+      referencesJson: publishForm.value.referencesJson ?? undefined,
       category: publishForm.value.category || undefined,
     })
     ElMessage.success('发布成功！已分享到问答广场')
